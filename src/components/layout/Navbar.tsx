@@ -64,6 +64,7 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
           </NavLink>
           <NavLink to="/contest/history" className="nav-item text-sm font-medium text-dark-muted hover:text-dark-text transition-colors px-2.5 py-2 rounded-xl hover:bg-dark-nav">제출내역</NavLink>
           <NavLink to="/creators" className="nav-item text-sm font-medium text-dark-muted hover:text-dark-text transition-colors px-2.5 py-2 rounded-xl hover:bg-dark-nav">만든사람들</NavLink>
+          <NavLink to="/check-in" className="nav-item text-sm font-medium text-dark-muted hover:text-dark-text transition-colors px-2.5 py-2 rounded-xl hover:bg-dark-nav">출석</NavLink>
           <NavLink to="/profile" className="nav-item text-sm font-medium text-dark-muted hover:text-dark-text transition-colors px-2.5 py-2 rounded-xl hover:bg-dark-nav">마이페이지</NavLink>
         </div>
 

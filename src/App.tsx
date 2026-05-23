@@ -33,6 +33,7 @@ const ReportsPage = lazy(() => import('./pages/admin/ReportsPage'));
 const ReportDetailPage = lazy(() => import('./pages/admin/ReportDetailPage'));
 const SearchPage = lazy(() => import('./pages/SearchPage'));
 const CreatorsPage = lazy(() => import('./pages/CreatorsPage'));
+const CheckInPage = lazy(() => import('./pages/checkin/CheckInPage'));
 
 type Theme = 'dark' | 'light';
 
@@ -172,7 +173,7 @@ function App() {
             <Route path="/calendar" element={<Navigate to="/events" replace />} />
             <Route path="/events/:eventId" element={<EventDetailPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
-            <Route path="/check-in" element={<div className="text-center mt-10">Check-in Page (Coming Soon)</div>} />
+            <Route path="/check-in" element={<CheckInPage />} />
           </Route>
 
           <Route element={<AdminRoute />}>
