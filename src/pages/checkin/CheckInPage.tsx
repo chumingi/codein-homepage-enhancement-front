@@ -1,7 +1,121 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { format, parseISO } from "date-fns";
+import { CheckCircle, Calendar, Zap } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { getTodayCheckInStatus, checkIn } from "../../api/checkin";
-import type { TodayCheckInStatus } from "../../types/checkin";
+import type { TodayCheckInStatus, StampInfo } from "../../types/checkin";
+
+// --- TodayCheckInCard ---
+
+interface TodayCheckInCardProps {
+  status: TodayCheckInStatus;
+  isSubmitting: boolean;
+  onCheckIn: () => void;
+}
+
+const TodayCheckInCard: React.FC<TodayCheckInCardProps> = ({ status, isSubmitting, onCheckIn }) => {
+  const isDisabled = isSubmitting || status.checked_in;
+
+  return (
+    <div className="bg-dark-card border border-dark-line rounded-2xl p-6 space-y-4">
+      <div className="flex items-center gap-2 text-sm text-dark-muted">
+        <Calendar size={15} />
+        <span>{format(parseISO(status.date), "yyyy년 M월 d일")}</span>
+      </div>
+
+      {status.checked_in ? (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <CheckCircle size={20} className="text-green-500" />
+            <span className="font-semibold text-dark-text">오늘 출석 완료</span>
+          </div>
+
+          {status.checked_in_at && (
+            <p className="text-sm text-dark-muted">
+              {format(parseISO(status.checked_in_at), "HH:mm")}에 출석했어요.
+            </p>
+          )}
+
+          {status.points_earned !== null && (
+            <div className="flex items-center gap-1.5 text-sm">
+              <Zap size={14} className="text-yellow-400" />
+              <span className="text-yellow-400 font-medium">
+                +{status.points_earned} 포인트 획득
+              </span>
+            </div>
+          )}
+
+          <button
+            disabled
+            className="w-full py-3 rounded-xl bg-dark-cardSoft text-dark-muted text-sm font-medium cursor-not-allowed"
+          >
+            오늘 출석 완료
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <p className="text-dark-text">아직 오늘 출석을 하지 않았어요.</p>
+          <button
+            onClick={onCheckIn}
+            disabled={isDisabled}
+            className="w-full py-3 rounded-xl bg-brand text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? "처리 중..." : "오늘 출석하기"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// --- StampBoard ---
+
+interface StampBoardProps {
+  stamp: StampInfo;
+}
+
+const StampBoard: React.FC<StampBoardProps> = ({ stamp }) => {
+  const { board_size, current_cycle, progress } = stamp;
+  const remaining = board_size - progress;
+
+  return (
+    <div className="bg-dark-card border border-dark-line rounded-2xl p-6 space-y-5">
+      <div className="flex items-center justify-between">
+        <h2 className="font-semibold text-dark-text">스탬프 보드</h2>
+        <span className="text-xs text-dark-muted">
+          {current_cycle}사이클 &middot; {progress} / {board_size}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-5 gap-3">
+        {Array.from({ length: board_size }, (_, i) => {
+          const filled = i < progress;
+          return (
+            <div
+              key={i}
+              className={[
+                "aspect-square rounded-xl flex items-center justify-center transition-all duration-200",
+                filled
+                  ? "bg-brand/20 border-2 border-brand"
+                  : "bg-dark-cardSoft border-2 border-dark-line",
+              ].join(" ")}
+            >
+              {filled && <CheckCircle size={22} className="text-brand" />}
+            </div>
+          );
+        })}
+      </div>
+
+      <p className="text-xs text-center text-dark-muted">
+        {remaining > 0
+          ? `${remaining}칸 더 채우면 보상을 받아요`
+          : "스탬프 보드 완성! 보상이 지급됩니다."}
+      </p>
+    </div>
+  );
+};
+
+// --- CheckInPage ---
 
 const CheckInPage: React.FC = () => {
   const [status, setStatus] = useState<TodayCheckInStatus | null>(null);
@@ -68,12 +182,20 @@ const CheckInPage: React.FC = () => {
     );
   }
 
+  if (!status) return null;
+
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-dark-text mb-2">출석 체크</h1>
-      <p className="text-dark-muted mb-8">매일 출석하고 포인트를 모아보세요.</p>
-      {/* TODO: <TodayCheckInCard /> */}
-      {/* TODO: <StampBoard /> */}
+    <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-dark-text mb-2">출석 체크</h1>
+        <p className="text-dark-muted">매일 출석하고 포인트를 모아보세요.</p>
+      </div>
+      <TodayCheckInCard
+        status={status}
+        isSubmitting={isSubmitting}
+        onCheckIn={handleCheckIn}
+      />
+      <StampBoard stamp={status.stamp} />
     </div>
   );
 };
