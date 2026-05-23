@@ -34,6 +34,7 @@ const ReportDetailPage = lazy(() => import('./pages/admin/ReportDetailPage'));
 const SearchPage = lazy(() => import('./pages/SearchPage'));
 const CreatorsPage = lazy(() => import('./pages/CreatorsPage'));
 const CheckInPage = lazy(() => import('./pages/checkin/CheckInPage'));
+const CheckInAdminPage = lazy(() => import('./pages/admin/CheckInAdminPage'));
 
 type Theme = 'dark' | 'light';
 
@@ -183,6 +184,7 @@ function App() {
             <Route path="/admin/problem-bank" element={<ProblemBankAdminPage />} />
             <Route path="/admin/reports" element={<ReportsPage />} />
             <Route path="/admin/reports/:reportId" element={<ReportDetailPage />} />
+            <Route path="/admin/check-in" element={<CheckInAdminPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

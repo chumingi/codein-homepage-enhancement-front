@@ -178,6 +178,14 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
                             <span className="inline-flex h-4 w-4 items-center justify-center text-[10px] font-semibold text-brand">!</span>
                             신고 관리
                           </Link>
+                          <Link
+                            to="/admin/check-in"
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-dark-muted hover:bg-dark-nav hover:text-dark-text transition-colors"
+                            onClick={() => setIsDropdownOpen(false)}
+                          >
+                            <span className="inline-flex h-4 w-4 items-center justify-center text-[10px] font-semibold text-brand">✓</span>
+                            출석 관리
+                          </Link>
                         </>
                       )}
                     </div>
