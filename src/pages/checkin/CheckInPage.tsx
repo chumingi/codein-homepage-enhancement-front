@@ -150,7 +150,7 @@ const CheckInPage: React.FC = () => {
       const result = await checkIn();
       if (result.status === "success") {
         setStatus({
-          ...status,
+          ...prev,
           checked_in: true,
           checked_in_at: result.checked_in_at,
           points_earned: result.points_earned,
@@ -182,7 +182,22 @@ const CheckInPage: React.FC = () => {
     );
   }
 
-  if (!status) return null;
+  if (!status) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-8">
+        <div className="text-center py-20" role="alert">
+          <p className="text-dark-muted mb-4">출석 정보를 불러오지 못했습니다.</p>
+          <button
+            type="button"
+            onClick={fetchStatus}
+            className="text-brand text-sm hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded"
+          >
+            다시 시도하기
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
