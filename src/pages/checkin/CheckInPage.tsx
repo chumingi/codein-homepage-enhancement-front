@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { format, parseISO } from "date-fns";
-import { CheckCircle, Calendar, Zap } from "lucide-react";
+import { CheckCircle, Calendar, Zap, Gift } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { getTodayCheckInStatus, checkIn } from "../../api/checkin";
 import type { TodayCheckInStatus, StampInfo } from "../../types/checkin";
@@ -77,6 +77,9 @@ interface StampBoardProps {
 const StampBoard: React.FC<StampBoardProps> = ({ stamp }) => {
   const { board_size, current_cycle, progress } = stamp;
   const remaining = board_size - progress;
+  const COLS = 5;
+  const remainder = board_size % COLS;
+  const paddedSize = remainder === 0 ? board_size : board_size + (COLS - remainder);
 
   return (
     <div className="bg-dark-card border border-dark-line rounded-2xl p-6 space-y-5">
@@ -104,12 +107,25 @@ const StampBoard: React.FC<StampBoardProps> = ({ stamp }) => {
             </div>
           );
         })}
+        {paddedSize > board_size &&
+          Array.from({ length: paddedSize - board_size }, (_, i) => (
+            <div key={`pad-${i}`} className="aspect-square" />
+          ))}
       </div>
 
+      {stamp.reward_points !== undefined && (
+        <div className="flex items-center justify-center gap-1.5 text-xs text-dark-muted">
+          <Gift size={13} />
+          <span>완성 보상 {stamp.reward_points}포인트</span>
+        </div>
+      )}
+
       <p className="text-xs text-center text-dark-muted">
-        {remaining > 0
-          ? `${remaining}칸 더 채우면 보상을 받아요`
-          : "스탬프 보드 완성! 보상이 지급됩니다."}
+        {stamp.daily_points !== undefined
+          ? `일일 +${stamp.daily_points}pt · ${remaining > 0 ? `${remaining}칸 더 채우면 보상` : "스탬프 완성!"}`
+          : remaining > 0
+            ? `${remaining}칸 더 채우면 보상을 받아요`
+            : "스탬프 보드 완성! 보상이 지급됩니다."}
       </p>
     </div>
   );
