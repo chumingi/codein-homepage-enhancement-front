@@ -1,4 +1,5 @@
 // import api from "./axios";
+import { format } from "date-fns";
 import type {
   TodayCheckInStatus,
   CheckInResult,
@@ -8,19 +9,21 @@ import type {
 // 사용자 API 목업
 // TODO: 백엔드 완성 후 실 API로 교체
 
+const today = format(new Date(), "yyyy-MM-dd");
+
 const MOCK_TODAY_STATUS: TodayCheckInStatus = {
-  date: "2026-05-22",
+  date: today,
   checked_in: false,
   checked_in_at: null,
   points_earned: null,
-  stamp: { board_size: 10, current_cycle: 1, progress: 3 },
+  stamp: { board_size: 10, current_cycle: 1, progress: 3, daily_points: 10, reward_points: 100 },
 };
 
 const MOCK_CHECK_IN_RESULT: CheckInResult = {
   status: "success",
-  checked_in_at: "2026-05-22T10:00:00+09:00",
+  checked_in_at: `${today}T10:00:00+09:00`,
   points_earned: 10,
-  stamp: { board_size: 10, current_cycle: 1, progress: 4 },
+  stamp: { board_size: 10, current_cycle: 1, progress: 4, daily_points: 10, reward_points: 100 },
 };
 
 export const getTodayCheckInStatus = async (): Promise<TodayCheckInStatus> => {
@@ -55,14 +58,14 @@ export const getAdminDailyAttendance = async (
         user_name: "부원1",
         student_id: "202600001",
         status: "present",
-        checked_in_at: "2026-05-22T08:00:00+00:00",
+        checked_in_at: `${today}T08:00:00+09:00`,
       },
       {
         user_id: 2,
         user_name: "부원2",
         student_id: "202600002",
         status: "present",
-        checked_in_at: "2026-05-22T09:00:00+09:00",
+        checked_in_at: `${today}T09:00:00+09:00`,
       },
       {
         user_id: 3,
@@ -76,7 +79,7 @@ export const getAdminDailyAttendance = async (
         user_name: "부원4",
         student_id: "202600004",
         status: "present",
-        checked_in_at: "2026-05-22T10:00:00+00:00",
+        checked_in_at: `${today}T10:00:00+09:00`,
       },
       {
         user_id: 5,
