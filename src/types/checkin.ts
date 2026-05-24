@@ -4,6 +4,8 @@ export interface StampInfo {
   board_size: number;
   current_cycle: number;
   progress: number;
+  daily_points?: number;
+  reward_points?: number;
 }
 
 // 사용자
