@@ -20,7 +20,8 @@ const CHART_COLORS = {
 };
 
 const inputClass =
-  "rounded-lg border border-dark-line bg-dark-cardSoft px-3 py-2 text-sm text-dark-text focus:outline-none focus:border-brand";
+  "rounded-lg border border-dark-line bg-dark-cardSoft px-3 py-2 text-sm text-dark-text " +
+  "focus:outline-none focus:border-brand dark:[color-scheme:dark]";
 
 interface StatCardProps {
   icon: React.ReactNode;
