@@ -240,6 +240,21 @@ const BoardListPage: React.FC = () => {
                     {board.name}
                   </button>
                 ))}
+                <button 
+                  type="button" 
+                  className="px-4 py-1.5 rounded-lg text-sm font-semibold bg-white text-gray-600 border border-gray-200 hover:bg-blue-50"
+                  onClick={() => alert('프로젝트 게시판 클릭됨!')}
+                >
+                  프로젝트 게시판
+                </button>
+
+                <button 
+                  type="button" 
+                  className="px-4 py-1.5 rounded-lg text-sm font-semibold bg-white text-gray-600 border border-gray-200 hover:bg-blue-50"
+                  onClick={() => alert('기술 블로그 클릭됨!')}
+                >
+                  기술 블로그
+                </button>
               </div>
             </div>
           )}

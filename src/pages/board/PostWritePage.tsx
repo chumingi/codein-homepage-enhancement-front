@@ -21,6 +21,7 @@ const PostWritePage: React.FC = () => {
   const [boardId, setBoardId] = useState<number>(location.state?.boardId || 0);
   const [title, setTitle] = useState(initialTitle);
   const [content, setContent] = useState(initialContent);
+  const [githubUrl, setGithubUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
 
@@ -77,6 +78,7 @@ const PostWritePage: React.FC = () => {
       setBoardId(editPost.board_id);
       setTitle(editPost.title);
       setContent(editPost.content);
+      setGithubUrl(editPost.github_url || ''); //백엔드 필드명 github_url로 하기
       if (editPost.notice_type) {
         setShowAnnouncementOptions(true);
         setNoticeType(editPost.notice_type);
@@ -118,6 +120,7 @@ const PostWritePage: React.FC = () => {
         title,
         content,
         board_id: boardId,
+        github_url: githubUrl,
         ...(showAnnouncementOptions ? {
           notice_type: noticeType,
           target_audience: targetAudience,
@@ -186,6 +189,20 @@ const PostWritePage: React.FC = () => {
             onChange={(e) => setTitle(e.target.value)}
             className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             placeholder="제목을 입력하세요"
+          />
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="githubUrl">
+            GitHub 주소
+          </label>
+          <input
+            id="githubUrl"
+            type="url"
+            value={githubUrl}
+            onChange={(e) => setGithubUrl(e.target.value)}
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            placeholder="https://github.com/your-repository"
           />
         </div>
 
