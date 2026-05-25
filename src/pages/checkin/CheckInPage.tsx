@@ -153,6 +153,8 @@ const CheckInPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newlyFilledIndex, setNewlyFilledIndex] = useState<number | null>(null);
+  const [showRewardModal, setShowRewardModal] = useState(false);
+  const [rewardPoints, setRewardPoints] = useState<number | null>(null);
 
   const fetchStatus = useCallback(async () => {
     setLoading(true);
@@ -190,6 +192,10 @@ const CheckInPage: React.FC = () => {
         });
         setNewlyFilledIndex(result.stamp.progress - 1);
         toast.success(`출석 완료! +${result.points_earned}포인트`);
+        if (result.stamp.cycle_complete) {
+          setRewardPoints(result.stamp.reward_points ?? null);
+          setShowRewardModal(true);
+        }
       } else {
         setStatus({
           ...prev,
@@ -204,6 +210,15 @@ const CheckInPage: React.FC = () => {
       toast.error("출석 처리 중 오류가 발생했습니다.");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleCloseRewardModal = () => {
+    setShowRewardModal(false);
+    if (rewardPoints !== null) {
+      setStatus((prev) =>
+        prev ? { ...prev, points_earned: (prev.points_earned ?? 0) + rewardPoints } : null
+      );
     }
   };
 
@@ -253,22 +268,51 @@ const CheckInPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-dark-text mb-2">출석 체크</h1>
-        <p className="text-dark-muted">매일 출석하고 포인트를 모아보세요.</p>
+    <>
+      <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-dark-text mb-2">출석 체크</h1>
+          <p className="text-dark-muted">매일 출석하고 포인트를 모아보세요.</p>
+        </div>
+        <TodayCheckInCard
+          status={status}
+          isSubmitting={isSubmitting}
+          onCheckIn={handleCheckIn}
+        />
+        <StampBoard
+          stamp={status.stamp}
+          newlyFilledIndex={newlyFilledIndex}
+          onAnimationEnd={() => setNewlyFilledIndex(null)}
+        />
       </div>
-      <TodayCheckInCard
-        status={status}
-        isSubmitting={isSubmitting}
-        onCheckIn={handleCheckIn}
-      />
-      <StampBoard
-        stamp={status.stamp}
-        newlyFilledIndex={newlyFilledIndex}
-        onAnimationEnd={() => setNewlyFilledIndex(null)}
-      />
-    </div>
+
+      {showRewardModal && (
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4"
+          onClick={handleCloseRewardModal}
+        >
+          <div
+            className="bg-dark-card rounded-2xl shadow-xl max-w-sm w-full p-8 text-center animate-in fade-in zoom-in-95 duration-200 border border-dark-line"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-4xl mb-4">🎉</p>
+            <h2 className="text-xl font-bold text-dark-text mb-2">스탬프 완성!</h2>
+            <p className="text-dark-muted text-sm mb-1">출석판을 모두 채웠습니다.</p>
+            <p className="text-brand font-semibold text-sm mb-6">
+              {rewardPoints !== null
+                ? `보상 ${rewardPoints}포인트 지급`
+                : "보상 포인트가 지급됐습니다."}
+            </p>
+            <button
+              onClick={handleCloseRewardModal}
+              className="px-6 py-2 rounded-xl bg-brand text-white text-sm font-medium hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
+              확인
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 

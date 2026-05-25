@@ -16,14 +16,28 @@ const MOCK_TODAY_STATUS: TodayCheckInStatus = {
   checked_in: false,
   checked_in_at: null,
   points_earned: null,
-  stamp: { board_size: 10, current_cycle: 1, progress: 3, daily_points: 10, reward_points: 100 },
+  stamp: {
+    board_size: 10,
+    current_cycle: 1,
+    progress: 3,
+    daily_points: 10,
+    reward_points: 100,
+  },
 };
 
 const MOCK_CHECK_IN_RESULT: CheckInResult = {
   status: "success",
   checked_in_at: `${today}T10:00:00+09:00`,
   points_earned: 10,
-  stamp: { board_size: 10, current_cycle: 1, progress: 4, daily_points: 10, reward_points: 100 },
+  // cycle_complete: true 로 바꾸면 보상 모달 테스트 가능
+  stamp: {
+    board_size: 10,
+    current_cycle: 1,
+    progress: 4,
+    daily_points: 10,
+    reward_points: 100,
+    cycle_complete: false,
+  },
 };
 
 export const getTodayCheckInStatus = async (): Promise<TodayCheckInStatus> => {

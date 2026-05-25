@@ -6,6 +6,7 @@ export interface StampInfo {
   progress: number;
   daily_points?: number;
   reward_points?: number;
+  cycle_complete?: boolean;
 }
 
 // 사용자
