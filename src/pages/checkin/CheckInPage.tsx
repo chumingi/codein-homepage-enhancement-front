@@ -72,9 +72,11 @@ const TodayCheckInCard: React.FC<TodayCheckInCardProps> = ({ status, isSubmittin
 
 interface StampBoardProps {
   stamp: StampInfo;
+  newlyFilledIndex?: number | null;
+  onAnimationEnd?: () => void;
 }
 
-const StampBoard: React.FC<StampBoardProps> = ({ stamp }) => {
+const StampBoard: React.FC<StampBoardProps> = ({ stamp, newlyFilledIndex, onAnimationEnd }) => {
   const { board_size, current_cycle, progress } = stamp;
   const remaining = board_size - progress;
   const COLS = 5;
@@ -93,14 +95,19 @@ const StampBoard: React.FC<StampBoardProps> = ({ stamp }) => {
       <div className="grid grid-cols-5 gap-3">
         {Array.from({ length: board_size }, (_, i) => {
           const filled = i < progress;
+          const isNewlyFilled = newlyFilledIndex != null && i === newlyFilledIndex;
           return (
             <div
               key={i}
+              onAnimationEnd={isNewlyFilled ? onAnimationEnd : undefined}
               className={[
                 "aspect-square rounded-xl flex items-center justify-center transition-all duration-200",
                 filled
                   ? "bg-brand/20 border-2 border-brand"
                   : "bg-dark-cardSoft border-2 border-dark-line",
+                isNewlyFilled
+                  ? "animate-[stamp-pop_0.3s_ease-out] motion-reduce:animate-none"
+                  : "",
               ].join(" ")}
             >
               {filled && <CheckCircle size={22} className="text-brand" />}
@@ -137,6 +144,7 @@ const CheckInPage: React.FC = () => {
   const [status, setStatus] = useState<TodayCheckInStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newlyFilledIndex, setNewlyFilledIndex] = useState<number | null>(null);
 
   const fetchStatus = useCallback(async () => {
     setLoading(true);
@@ -172,6 +180,7 @@ const CheckInPage: React.FC = () => {
           points_earned: result.points_earned,
           stamp: result.stamp,
         });
+        setNewlyFilledIndex(result.stamp.progress - 1);
         toast.success(`출석 완료! +${result.points_earned}포인트`);
       } else {
         setStatus({
@@ -226,7 +235,11 @@ const CheckInPage: React.FC = () => {
         isSubmitting={isSubmitting}
         onCheckIn={handleCheckIn}
       />
-      <StampBoard stamp={status.stamp} />
+      <StampBoard
+        stamp={status.stamp}
+        newlyFilledIndex={newlyFilledIndex}
+        onAnimationEnd={() => setNewlyFilledIndex(null)}
+      />
     </div>
   );
 };
