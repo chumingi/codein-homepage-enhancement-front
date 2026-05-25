@@ -5,7 +5,7 @@ import { toast } from "react-hot-toast";
 import { getTodayCheckInStatus, checkIn } from "../../api/checkin";
 import type { TodayCheckInStatus, StampInfo } from "../../types/checkin";
 
-// --- TodayCheckInCard ---
+// TodayCheckInCard
 
 interface TodayCheckInCardProps {
   status: TodayCheckInStatus;
@@ -76,7 +76,7 @@ const TodayCheckInCard: React.FC<TodayCheckInCardProps> = ({ status, isSubmittin
   );
 };
 
-// --- StampBoard ---
+// StampBoard
 
 interface StampBoardProps {
   stamp: StampInfo;
@@ -146,7 +146,7 @@ const StampBoard: React.FC<StampBoardProps> = ({ stamp, newlyFilledIndex, onAnim
   );
 };
 
-// --- CheckInPage ---
+// CheckInPage
 
 const CheckInPage: React.FC = () => {
   const [status, setStatus] = useState<TodayCheckInStatus | null>(null);
@@ -209,8 +209,28 @@ const CheckInPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-8">
-        <div className="text-center py-20 text-dark-muted">로딩 중...</div>
+      <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+        <div className="space-y-2 animate-pulse">
+          <div className="h-8 bg-dark-cardSoft rounded-lg w-32" />
+          <div className="h-4 bg-dark-cardSoft rounded w-48" />
+        </div>
+        <div className="bg-dark-card border border-dark-line rounded-2xl p-6 animate-pulse space-y-4">
+          <div className="h-4 bg-dark-cardSoft rounded w-28" />
+          <div className="h-4 bg-dark-cardSoft rounded w-48" />
+          <div className="h-12 bg-dark-cardSoft rounded-xl" />
+        </div>
+        <div className="bg-dark-card border border-dark-line rounded-2xl p-6 animate-pulse space-y-5">
+          <div className="flex items-center justify-between">
+            <div className="h-4 bg-dark-cardSoft rounded w-24" />
+            <div className="h-4 bg-dark-cardSoft rounded w-20" />
+          </div>
+          <div className="grid grid-cols-5 gap-3">
+            {Array.from({ length: 10 }, (_, i) => (
+              <div key={i} className="aspect-square rounded-xl bg-dark-cardSoft" />
+            ))}
+          </div>
+          <div className="h-3 bg-dark-cardSoft rounded w-36 mx-auto" />
+        </div>
       </div>
     );
   }
