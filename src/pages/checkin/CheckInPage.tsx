@@ -51,6 +51,14 @@ const TodayCheckInCard: React.FC<TodayCheckInCardProps> = ({ status, isSubmittin
           >
             오늘 출석 완료
           </button>
+
+          {status.stamp.progress < status.stamp.board_size && (
+            <p className="text-xs text-center text-dark-muted">
+              {status.stamp.board_size - status.stamp.progress === 1
+                ? "내일 출석하면 스탬프가 완성돼요! 🎉"
+                : `내일 출석하면 스탬프 ${status.stamp.progress + 1}/${status.stamp.board_size}가 채워져요!`}
+            </p>
+          )}
         </div>
       ) : (
         <div className="space-y-4">
