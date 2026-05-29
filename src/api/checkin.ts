@@ -16,6 +16,7 @@ const MOCK_STATUS: AttendanceStatus = {
   current_stamp_cycle: 1,
   current_stamp_count: 3,
   max_stamp_pieces: 10,
+  streak: 3, // TODO: 백엔드 완성 후 실 API로 교체
 };
 
 const MOCK_CHECK_RESULT: AttendanceCheckResult = {
@@ -25,6 +26,7 @@ const MOCK_CHECK_RESULT: AttendanceCheckResult = {
   current_stamp_count: 4,
   is_board_completed: false, // true 로 바꾸면 보상 모달 테스트 가능
   message: "출석 완료!",
+  streak: 4, // TODO: 백엔드 완성 후 실 API로 교체
 };
 
 export const getTodayCheckInStatus = async (): Promise<AttendanceStatus> => {
