@@ -1,46 +1,55 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { format, parseISO } from "date-fns";
-import { CheckCircle, Calendar, Zap, Gift } from "lucide-react";
+import { CheckCircle, Calendar, Zap } from "lucide-react";
 import { toast } from "react-hot-toast";
+import axios from "axios";
 import { getTodayCheckInStatus, checkIn } from "../../api/checkin";
-import type { TodayCheckInStatus, StampInfo } from "../../types/checkin";
+import type { AttendanceStatus } from "../../types/checkin";
 
 // TodayCheckInCard
 
 interface TodayCheckInCardProps {
-  status: TodayCheckInStatus;
+  hasAttendedToday: boolean;
+  checkedInAt: string | null;
+  pointsEarned: number | null;
   isSubmitting: boolean;
   onCheckIn: () => void;
 }
 
-const TodayCheckInCard: React.FC<TodayCheckInCardProps> = ({ status, isSubmitting, onCheckIn }) => {
-  const isDisabled = isSubmitting || status.checked_in;
+const TodayCheckInCard: React.FC<TodayCheckInCardProps> = ({
+  hasAttendedToday,
+  checkedInAt,
+  pointsEarned,
+  isSubmitting,
+  onCheckIn,
+}) => {
+  const isDisabled = isSubmitting || hasAttendedToday;
 
   return (
     <div className="bg-dark-card border border-dark-line rounded-2xl p-6 space-y-4">
       <div className="flex items-center gap-2 text-sm text-dark-muted">
         <Calendar size={15} />
-        <span>{format(parseISO(status.date), "yyyy년 M월 d일")}</span>
+        <span>{format(new Date(), "yyyy년 M월 d일")}</span>
       </div>
 
-      {status.checked_in ? (
+      {hasAttendedToday ? (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <CheckCircle size={20} className="text-green-500" />
             <span className="font-semibold text-dark-text">오늘 출석 완료</span>
           </div>
 
-          {status.checked_in_at && (
+          {checkedInAt && (
             <p className="text-sm text-dark-muted">
-              {format(parseISO(status.checked_in_at), "HH:mm")}에 출석했어요.
+              {format(parseISO(checkedInAt), "HH:mm")}에 출석했어요.
             </p>
           )}
 
-          {status.points_earned !== null && (
+          {pointsEarned !== null && (
             <div className="flex items-center gap-1.5 text-sm">
               <Zap size={14} className="text-yellow-400" />
               <span className="text-yellow-400 font-medium">
-                +{status.points_earned} 포인트 획득
+                +{pointsEarned} 포인트 획득
               </span>
             </div>
           )}
@@ -51,14 +60,6 @@ const TodayCheckInCard: React.FC<TodayCheckInCardProps> = ({ status, isSubmittin
           >
             오늘 출석 완료
           </button>
-
-          {status.stamp.progress < status.stamp.board_size && (
-            <p className="text-xs text-center text-dark-muted">
-              {status.stamp.board_size - status.stamp.progress === 1
-                ? "내일 출석하면 스탬프가 완성돼요! 🎉"
-                : `내일 출석하면 스탬프 ${status.stamp.progress + 1}/${status.stamp.board_size}가 채워져요!`}
-            </p>
-          )}
         </div>
       ) : (
         <div className="space-y-4">
@@ -79,29 +80,36 @@ const TodayCheckInCard: React.FC<TodayCheckInCardProps> = ({ status, isSubmittin
 // StampBoard
 
 interface StampBoardProps {
-  stamp: StampInfo;
+  boardSize: number;
+  currentCycle: number;
+  progress: number;
   newlyFilledIndex?: number | null;
   onAnimationEnd?: () => void;
 }
 
-const StampBoard: React.FC<StampBoardProps> = ({ stamp, newlyFilledIndex, onAnimationEnd }) => {
-  const { board_size, current_cycle, progress } = stamp;
-  const remaining = board_size - progress;
+const StampBoard: React.FC<StampBoardProps> = ({
+  boardSize,
+  currentCycle,
+  progress,
+  newlyFilledIndex,
+  onAnimationEnd,
+}) => {
+  const remaining = boardSize - progress;
   const COLS = 5;
-  const remainder = board_size % COLS;
-  const paddedSize = remainder === 0 ? board_size : board_size + (COLS - remainder);
+  const remainder = boardSize % COLS;
+  const paddedSize = remainder === 0 ? boardSize : boardSize + (COLS - remainder);
 
   return (
     <div className="bg-dark-card border border-dark-line rounded-2xl p-6 space-y-5">
       <div className="flex items-center justify-between">
         <h2 className="font-semibold text-dark-text">스탬프 보드</h2>
         <span className="text-xs text-dark-muted">
-          {current_cycle}사이클 &middot; {progress} / {board_size}
+          {currentCycle}사이클 &middot; {progress} / {boardSize}
         </span>
       </div>
 
       <div className="grid grid-cols-5 gap-3">
-        {Array.from({ length: board_size }, (_, i) => {
+        {Array.from({ length: boardSize }, (_, i) => {
           const filled = i < progress;
           const isNewlyFilled = newlyFilledIndex != null && i === newlyFilledIndex;
           return (
@@ -122,25 +130,16 @@ const StampBoard: React.FC<StampBoardProps> = ({ stamp, newlyFilledIndex, onAnim
             </div>
           );
         })}
-        {paddedSize > board_size &&
-          Array.from({ length: paddedSize - board_size }, (_, i) => (
+        {paddedSize > boardSize &&
+          Array.from({ length: paddedSize - boardSize }, (_, i) => (
             <div key={`pad-${i}`} className="aspect-square" />
           ))}
       </div>
 
-      {stamp.reward_points !== undefined && (
-        <div className="flex items-center justify-center gap-1.5 text-xs text-dark-muted">
-          <Gift size={13} />
-          <span>완성 보상 {stamp.reward_points}포인트</span>
-        </div>
-      )}
-
       <p className="text-xs text-center text-dark-muted">
-        {stamp.daily_points !== undefined
-          ? `일일 +${stamp.daily_points}pt · ${remaining > 0 ? `${remaining}칸 더 채우면 보상` : "스탬프 완성!"}`
-          : remaining > 0
-            ? `${remaining}칸 더 채우면 보상을 받아요`
-            : "스탬프 보드 완성! 보상이 지급됩니다."}
+        {remaining > 0
+          ? `${remaining}칸 더 채우면 보상을 받아요`
+          : "스탬프 보드 완성! 보상이 지급됩니다."}
       </p>
     </div>
   );
@@ -149,7 +148,9 @@ const StampBoard: React.FC<StampBoardProps> = ({ stamp, newlyFilledIndex, onAnim
 // CheckInPage
 
 const CheckInPage: React.FC = () => {
-  const [status, setStatus] = useState<TodayCheckInStatus | null>(null);
+  const [status, setStatus] = useState<AttendanceStatus | null>(null);
+  const [checkedInAt, setCheckedInAt] = useState<string | null>(null);
+  const [pointsEarned, setPointsEarned] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newlyFilledIndex, setNewlyFilledIndex] = useState<number | null>(null);
@@ -174,51 +175,38 @@ const CheckInPage: React.FC = () => {
   }, [fetchStatus]);
 
   const handleCheckIn = async () => {
-    if (isSubmitting || !status || status.checked_in) return;
+    if (isSubmitting || !status || status.has_attended_today) return;
 
     setIsSubmitting(true);
     const prev = status;
-    setStatus({ ...status, checked_in: true }); // Optimistic Update
+    setStatus({ ...status, has_attended_today: true }); // Optimistic Update
 
     try {
       const result = await checkIn();
-      if (result.status === "success") {
-        setStatus({
-          ...prev,
-          checked_in: true,
-          checked_in_at: result.checked_in_at,
-          points_earned: result.points_earned,
-          stamp: result.stamp,
-        });
-        setNewlyFilledIndex(result.stamp.progress - 1);
-        toast.success(`출석 완료! +${result.points_earned}포인트`);
-        if (result.stamp.cycle_complete) {
-          setRewardPoints(result.stamp.reward_points ?? null);
-          setShowRewardModal(true);
-        }
-      } else {
-        setStatus({
-          ...prev,
-          checked_in: true,
-          checked_in_at: result.checked_in_at,
-        });
-        toast.error(result.message);
+      setStatus({
+        ...prev,
+        has_attended_today: true,
+        current_stamp_count: result.current_stamp_count,
+      });
+      setCheckedInAt(result.attended_at);
+      setPointsEarned(result.earned_points);
+      setNewlyFilledIndex(result.current_stamp_count - 1);
+      toast.success(`출석 완료! +${result.earned_points}포인트`);
+      if (result.is_board_completed) {
+        setRewardPoints(result.earned_points);
+        setShowRewardModal(true);
       }
-    } catch (error) {
-      console.error("출석 체크 실패", error);
-      setStatus(prev); // 실패 시 롤백
-      toast.error("출석 처리 중 오류가 발생했습니다.");
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error) && error.response?.status === 400) {
+        toast.error("오늘은 이미 출석하셨습니다.");
+        // 400은 실제로 이미 출석된 상태 — 낙관적 업데이트 유지 (롤백하지 않음)
+      } else {
+        console.error("출석 체크 실패", error);
+        setStatus(prev);
+        toast.error("출석 처리 중 오류가 발생했습니다.");
+      }
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleCloseRewardModal = () => {
-    setShowRewardModal(false);
-    if (rewardPoints !== null) {
-      setStatus((prev) =>
-        prev ? { ...prev, points_earned: (prev.points_earned ?? 0) + rewardPoints } : null
-      );
     }
   };
 
@@ -275,12 +263,16 @@ const CheckInPage: React.FC = () => {
           <p className="text-dark-muted">매일 출석하고 포인트를 모아보세요.</p>
         </div>
         <TodayCheckInCard
-          status={status}
+          hasAttendedToday={status.has_attended_today}
+          checkedInAt={checkedInAt}
+          pointsEarned={pointsEarned}
           isSubmitting={isSubmitting}
           onCheckIn={handleCheckIn}
         />
         <StampBoard
-          stamp={status.stamp}
+          boardSize={status.max_stamp_pieces}
+          currentCycle={status.current_stamp_cycle}
+          progress={status.current_stamp_count}
           newlyFilledIndex={newlyFilledIndex}
           onAnimationEnd={() => setNewlyFilledIndex(null)}
         />
@@ -289,7 +281,7 @@ const CheckInPage: React.FC = () => {
       {showRewardModal && (
         <div
           className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4"
-          onClick={handleCloseRewardModal}
+          onClick={() => setShowRewardModal(false)}
         >
           <div
             className="bg-dark-card rounded-2xl shadow-xl max-w-sm w-full p-8 text-center animate-in fade-in zoom-in-95 duration-200 border border-dark-line"
@@ -304,7 +296,7 @@ const CheckInPage: React.FC = () => {
                 : "보상 포인트가 지급됐습니다."}
             </p>
             <button
-              onClick={handleCloseRewardModal}
+              onClick={() => setShowRewardModal(false)}
               className="px-6 py-2 rounded-xl bg-brand text-white text-sm font-medium hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
             >
               확인

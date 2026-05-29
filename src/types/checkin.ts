@@ -1,56 +1,42 @@
-// 공통
-
-export interface StampInfo {
-  board_size: number;
-  current_cycle: number;
-  progress: number;
-  daily_points?: number;
-  reward_points?: number;
-  cycle_complete?: boolean;
+// GET /attendance/me/status
+export interface AttendanceStatus {
+  has_attended_today: boolean;
+  current_stamp_cycle: number;
+  current_stamp_count: number;
+  max_stamp_pieces: number;
 }
 
-// 사용자
-
-export interface TodayCheckInStatus {
-  date: string;
-  checked_in: boolean;
-  checked_in_at: string | null;
-  points_earned: number | null;
-  stamp: StampInfo;
-}
-
-export interface CheckInSuccess {
-  status: "success";
-  checked_in_at: string;
-  points_earned: number;
-  stamp: StampInfo;
-}
-
-export interface AlreadyCheckedIn {
-  status: "already_checked_in";
-  checked_in_at: string;
+// POST /attendance/me/check (200 OK)
+export interface AttendanceCheckResult {
+  success: boolean;
+  attended_at: string;
+  earned_points: number;
+  current_stamp_count: number;
+  is_board_completed: boolean;
   message: string;
 }
 
-export type CheckInResult = CheckInSuccess | AlreadyCheckedIn;
-
-// 관리자
-
-export interface AdminAttendanceRecord {
-  user_id: number;
-  user_name: string;
-  student_id: string;
-  status: "present" | null;
-  checked_in_at: string | null;
+// GET /attendance/me/history 아이템 (2단계)
+export interface AttendanceHistoryItem {
+  date: string;            // "YYYY-MM-DD"
+  attended_at: string;
+  earned_points: number;
 }
 
-export interface AdminDailyStats {
-  date: string;
-  stats: {
+// GET /attendance/admin/status
+export interface AdminAttendanceDashboard {
+  summary: {
     total_members: number;
-    attended: number;
-    absent: number;
+    attended_count: number;
+    absent_count: number;
     attendance_rate: number;
   };
-  records: AdminAttendanceRecord[];
+  member_list: AdminMemberAttendance[];
+}
+
+export interface AdminMemberAttendance {
+  user_id: number;
+  nickname: string;
+  status: "ATTENDED" | "ABSENT";
+  attended_at: string | null;
 }

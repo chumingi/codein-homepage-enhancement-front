@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { getAdminDailyAttendance } from "../../api/checkin";
-import type { AdminDailyStats } from "../../types/checkin";
+import type { AdminAttendanceDashboard } from "../../types/checkin";
 
 // Recharts는 SVG 기반이라 Tailwind 클래스 적용 불가 — 브랜드 토큰과 동일한 값 직접 사용
 const CHART_COLORS = {
@@ -46,7 +46,7 @@ const CheckInAdminPage: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>(
     format(new Date(), "yyyy-MM-dd")
   );
-  const [stats, setStats] = useState<AdminDailyStats | null>(null);
+  const [stats, setStats] = useState<AdminAttendanceDashboard | null>(null);
   const [loading, setLoading] = useState(false);
 
   const fetchStats = useCallback(async (date: string) => {
@@ -68,8 +68,8 @@ const CheckInAdminPage: React.FC = () => {
 
   const chartData = stats
     ? [
-        { name: "출석", value: stats.stats.attended },
-        { name: "미출석", value: stats.stats.absent },
+        { name: "출석", value: stats.summary.attended_count },
+        { name: "미출석", value: stats.summary.absent_count },
       ]
     : [];
 
@@ -103,23 +103,23 @@ const CheckInAdminPage: React.FC = () => {
               <StatCard
                 icon={<Users size={18} />}
                 label="전체 부원"
-                value={stats.stats.total_members}
+                value={stats.summary.total_members}
               />
               <StatCard
                 icon={<CheckCircle size={18} />}
                 label="출석"
-                value={stats.stats.attended}
+                value={stats.summary.attended_count}
                 highlight
               />
               <StatCard
                 icon={<XCircle size={18} />}
                 label="미출석"
-                value={stats.stats.absent}
+                value={stats.summary.absent_count}
               />
               <StatCard
                 icon={<TrendingUp size={18} />}
                 label="출석률"
-                value={`${stats.stats.attendance_rate}%`}
+                value={`${stats.summary.attendance_rate}%`}
                 highlight
               />
             </div>
@@ -163,7 +163,7 @@ const CheckInAdminPage: React.FC = () => {
             <div className="px-6 py-4 border-b border-dark-line">
               <h2 className="font-semibold text-dark-text">부원별 출석 현황</h2>
               <p className="text-xs text-dark-muted mt-0.5">
-                {format(parseISO(stats.date), "yyyy년 M월 d일")} 기준
+                {format(parseISO(selectedDate), "yyyy년 M월 d일")} 기준
               </p>
             </div>
             <div className="overflow-x-auto">
@@ -171,30 +171,26 @@ const CheckInAdminPage: React.FC = () => {
                 <thead>
                   <tr className="border-b border-dark-line text-dark-muted">
                     <th className="text-left px-6 py-3 font-medium">이름</th>
-                    <th className="text-left px-6 py-3 font-medium">학번</th>
                     <th className="text-left px-6 py-3 font-medium">출석 상태</th>
                     <th className="text-left px-6 py-3 font-medium">출석 시각</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {stats.records.map((record) => (
+                  {stats.member_list.map((member) => (
                     <tr
-                      key={record.user_id}
+                      key={member.user_id}
                       className={[
                         "border-b border-dark-line last:border-0 transition-colors",
-                        record.status === "present"
+                        member.status === "ATTENDED"
                           ? "bg-green-500/5"
                           : "",
                       ].join(" ")}
                     >
                       <td className="px-6 py-3 text-dark-text font-medium">
-                        {record.user_name}
-                      </td>
-                      <td className="px-6 py-3 text-dark-muted">
-                        {record.student_id}
+                        {member.nickname}
                       </td>
                       <td className="px-6 py-3">
-                        {record.status === "present" ? (
+                        {member.status === "ATTENDED" ? (
                           <span className="inline-flex items-center gap-1 text-green-400 text-xs font-medium">
                             <CheckCircle size={13} />
                             출석
@@ -207,8 +203,8 @@ const CheckInAdminPage: React.FC = () => {
                         )}
                       </td>
                       <td className="px-6 py-3 text-dark-muted">
-                        {record.checked_in_at
-                          ? format(parseISO(record.checked_in_at), "HH:mm")
+                        {member.attended_at
+                          ? format(parseISO(member.attended_at), "HH:mm")
                           : "—"}
                       </td>
                     </tr>
