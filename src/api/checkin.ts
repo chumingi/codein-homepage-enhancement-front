@@ -1,9 +1,11 @@
 // import api from "./axios";
-import { format } from "date-fns";
+import { format, getDaysInMonth } from "date-fns";
 import type {
   AttendanceStatus,
   AttendanceCheckResult,
   AdminAttendanceDashboard,
+  AttendanceDayRecord,
+  AttendanceHistoryResponse,
 } from "../types/checkin";
 
 // 사용자 API 목업
@@ -39,6 +41,45 @@ export const checkIn = async (): Promise<AttendanceCheckResult> => {
   return MOCK_CHECK_RESULT;
   // const res = await api.post<AttendanceCheckResult>("/attendance/me/check");
   // return res.data;
+};
+
+// 사용자 출석 이력 API 목업
+// TODO: 백엔드 완성 후 실 API로 교체
+export const getMyAttendanceHistory = async (
+  year: number,
+  month: number,
+): Promise<AttendanceHistoryResponse> => {
+  const daysInMonth = getDaysInMonth(new Date(year, month - 1));
+  const records: AttendanceDayRecord[] = [];
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = format(new Date(year, month - 1, day), "yyyy-MM-dd");
+    const isCheckedIn = day % 3 !== 0;
+    records.push({
+      date,
+      checked_in: isCheckedIn,
+      ...(isCheckedIn && {
+        checked_in_at: `${date}T09:${String(day).padStart(2, "0")}:00+09:00`,
+        points_earned: 10,
+      }),
+    });
+  }
+
+  const totalAttended = records.filter((r) => r.checked_in).length;
+
+  return {
+    year,
+    month,
+    records,
+    summary: {
+      total_attended: totalAttended,
+      current_streak: 3,
+    },
+  };
+  // const response = await api.get<AttendanceHistoryResponse>("/attendance/me", {
+  //   params: { year, month },
+  // });
+  // return response.data;
 };
 
 // 관리자 API 목업

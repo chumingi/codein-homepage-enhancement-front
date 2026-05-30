@@ -1,10 +1,25 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { format, parseISO } from "date-fns";
-import { CheckCircle, Calendar, Zap, Flame } from "lucide-react";
+import { format, parseISO, startOfMonth, getDay, getDaysInMonth } from "date-fns";
+import {
+  CheckCircle,
+  Calendar,
+  Zap,
+  Flame,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { toast } from "react-hot-toast";
 import axios from "axios";
-import { getTodayCheckInStatus, checkIn } from "../../api/checkin";
-import type { AttendanceStatus } from "../../types/checkin";
+import {
+  getTodayCheckInStatus,
+  checkIn,
+  getMyAttendanceHistory,
+} from "../../api/checkin";
+import type {
+  AttendanceStatus,
+  AttendanceHistoryResponse,
+} from "../../types/checkin";
 
 // TodayCheckInCard
 
@@ -86,6 +101,8 @@ interface StampBoardProps {
   streak?: number;
   newlyFilledIndex?: number | null;
   onAnimationEnd?: () => void;
+  isHistoryOpen: boolean;
+  onToggleHistory: () => void;
 }
 
 const StampBoard: React.FC<StampBoardProps> = ({
@@ -95,6 +112,8 @@ const StampBoard: React.FC<StampBoardProps> = ({
   streak,
   newlyFilledIndex,
   onAnimationEnd,
+  isHistoryOpen,
+  onToggleHistory,
 }) => {
   const remaining = boardSize - progress;
   const COLS = 5;
@@ -151,11 +170,28 @@ const StampBoard: React.FC<StampBoardProps> = ({
           </span>
         )}
       </div>
+
+      <button
+        type="button"
+        onClick={onToggleHistory}
+        aria-expanded={isHistoryOpen}
+        aria-controls="attendance-history"
+        className="w-full flex items-center justify-center gap-2 py-2.5 text-sm text-dark-muted hover:text-dark-text transition-colors border-t border-dark-line"
+      >
+        <span>{isHistoryOpen ? "이력 접기" : "출석 이력 보기"}</span>
+        <ChevronDown
+          size={15}
+          aria-hidden="true"
+          className={`transition-transform duration-200 ${isHistoryOpen ? "rotate-180" : ""}`}
+        />
+      </button>
     </div>
   );
 };
 
 // CheckInPage
+
+const DAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
 const CheckInPage: React.FC = () => {
   const [status, setStatus] = useState<AttendanceStatus | null>(null);
@@ -166,6 +202,48 @@ const CheckInPage: React.FC = () => {
   const [newlyFilledIndex, setNewlyFilledIndex] = useState<number | null>(null);
   const [showRewardModal, setShowRewardModal] = useState(false);
   const [rewardPoints, setRewardPoints] = useState<number | null>(null);
+
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [historyYear, setHistoryYear] = useState(() => new Date().getFullYear());
+  const [historyMonth, setHistoryMonth] = useState(() => new Date().getMonth() + 1);
+  const [history, setHistory] = useState<AttendanceHistoryResponse | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const fetchHistory = useCallback(async (year: number, month: number) => {
+    setHistoryLoading(true);
+    try {
+      const data = await getMyAttendanceHistory(year, month);
+      setHistory(data);
+    } catch (error) {
+      console.error("출석 이력 조회 실패", error);
+      toast.error("출석 이력을 불러오지 못했습니다.");
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isHistoryOpen) return;
+    fetchHistory(historyYear, historyMonth);
+  }, [isHistoryOpen, historyYear, historyMonth, fetchHistory]);
+
+  const handlePrevMonth = () => {
+    if (historyMonth === 1) {
+      setHistoryYear((y) => y - 1);
+      setHistoryMonth(12);
+    } else {
+      setHistoryMonth((m) => m - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (historyMonth === 12) {
+      setHistoryYear((y) => y + 1);
+      setHistoryMonth(1);
+    } else {
+      setHistoryMonth((m) => m + 1);
+    }
+  };
 
   const fetchStatus = useCallback(async () => {
     setLoading(true);
@@ -266,6 +344,11 @@ const CheckInPage: React.FC = () => {
     );
   }
 
+  const firstDay = startOfMonth(new Date(historyYear, historyMonth - 1));
+  const startOffset = getDay(firstDay);
+  const totalDays = getDaysInMonth(firstDay);
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+
   return (
     <>
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
@@ -287,7 +370,134 @@ const CheckInPage: React.FC = () => {
           streak={status.streak}
           newlyFilledIndex={newlyFilledIndex}
           onAnimationEnd={() => setNewlyFilledIndex(null)}
+          isHistoryOpen={isHistoryOpen}
+          onToggleHistory={() => setIsHistoryOpen((prev) => !prev)}
         />
+
+        {isHistoryOpen && (
+          <section
+            id="attendance-history"
+            className="bg-dark-card border border-dark-line rounded-2xl p-6"
+          >
+            <div className="flex items-center justify-between mb-5">
+              <button
+                type="button"
+                onClick={handlePrevMonth}
+                aria-label="이전 달"
+                className="p-1.5 rounded-lg text-dark-muted hover:text-dark-text hover:bg-dark-cardSoft transition-colors"
+              >
+                <ChevronLeft size={16} aria-hidden="true" />
+              </button>
+              <time
+                dateTime={`${historyYear}-${String(historyMonth).padStart(2, "0")}`}
+                className="text-sm font-semibold text-dark-text"
+              >
+                {historyYear}년 {historyMonth}월
+              </time>
+              <button
+                type="button"
+                onClick={handleNextMonth}
+                aria-label="다음 달"
+                className="p-1.5 rounded-lg text-dark-muted hover:text-dark-text hover:bg-dark-cardSoft transition-colors"
+              >
+                <ChevronRight size={16} aria-hidden="true" />
+              </button>
+            </div>
+
+            {historyLoading ? (
+              <div
+                role="status"
+                aria-live="polite"
+                aria-label="출석 이력 로딩 중"
+                className="grid grid-cols-7 gap-1.5 animate-pulse"
+              >
+                {Array.from({ length: 35 }, (_, i) => (
+                  <div
+                    key={i}
+                    aria-hidden="true"
+                    className="aspect-square rounded-full bg-dark-cardSoft"
+                  />
+                ))}
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-7 mb-2">
+                  {DAY_LABELS.map((d) => (
+                    <div
+                      key={d}
+                      className="text-center text-xs font-medium text-dark-muted py-1"
+                    >
+                      {d}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-7 gap-y-1">
+                  {Array.from({ length: startOffset }, (_, i) => (
+                    <div key={`empty-${i}`} aria-hidden="true" />
+                  ))}
+
+                  {Array.from({ length: totalDays }, (_, i) => {
+                    const day = i + 1;
+                    const dateStr = format(
+                      new Date(historyYear, historyMonth - 1, day),
+                      "yyyy-MM-dd",
+                    );
+                    const record = history?.records.find(
+                      (r) => r.date === dateStr,
+                    );
+                    const isAttended = record?.checked_in === true;
+                    const isToday = dateStr === todayStr;
+
+                    return (
+                      <div
+                        key={day}
+                        className="flex items-center justify-center py-0.5"
+                      >
+                        <div
+                          aria-label={`${historyMonth}월 ${day}일 ${isAttended ? "출석 완료" : "미출석"}`}
+                          className={[
+                            "w-7 h-7 flex items-center justify-center rounded-full text-xs",
+                            isAttended
+                              ? "bg-brand text-white font-medium"
+                              : "text-dark-muted",
+                            isToday && !isAttended
+                              ? "ring-1 ring-brand text-brand"
+                              : "",
+                            isToday && isAttended
+                              ? "ring-2 ring-offset-1 ring-brand ring-offset-dark-card"
+                              : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
+                        >
+                          {day}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {history && (
+                  <div className="mt-4 pt-4 border-t border-dark-line flex items-center justify-between text-xs text-dark-muted">
+                    <span>
+                      이번 달 출석:{" "}
+                      <span className="text-dark-text font-medium">
+                        {history.records.filter((r) => r.checked_in).length}일
+                      </span>
+                    </span>
+                    <span>
+                      누적 출석:{" "}
+                      <span className="text-dark-text font-medium">
+                        {history.summary.total_attended}일
+                      </span>
+                    </span>
+                  </div>
+                )}
+              </>
+            )}
+          </section>
+        )}
       </div>
 
       {showRewardModal && (

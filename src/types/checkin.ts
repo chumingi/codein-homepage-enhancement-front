@@ -42,3 +42,21 @@ export interface AdminMemberAttendance {
   status: "ATTENDED" | "ABSENT";
   attended_at: string | null;
 }
+
+// GET /attendance/me?year=&month= 응답 아이템 (2단계)
+export interface AttendanceDayRecord {
+  date: string;           // "YYYY-MM-DD"
+  checked_in: boolean;
+  checked_in_at?: string; // ISO datetime — 출석한 날만 존재
+  points_earned?: number;
+}
+
+export interface AttendanceHistoryResponse {
+  year: number;
+  month: number;
+  records: AttendanceDayRecord[];
+  summary: {
+    total_attended: number;
+    current_streak: number;
+  };
+}
