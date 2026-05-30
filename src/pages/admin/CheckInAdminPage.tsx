@@ -10,8 +10,8 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { getAdminDailyAttendance } from "../../api/checkin";
-import type { AdminAttendanceDashboard } from "../../types/checkin";
+import { getAdminDailyAttendance, getAttendancePolicy, updateAttendancePolicy } from "../../api/checkin";
+import type { AdminAttendanceDashboard, AttendancePolicy } from "../../types/checkin";
 
 // Recharts는 SVG 기반이라 Tailwind 클래스 적용 불가 — 브랜드 토큰과 동일한 값 직접 사용
 const CHART_COLORS = {
@@ -48,6 +48,14 @@ const CheckInAdminPage: React.FC = () => {
   );
   const [stats, setStats] = useState<AdminAttendanceDashboard | null>(null);
   const [loading, setLoading] = useState(false);
+  const [policy, setPolicy] = useState<AttendancePolicy | null>(null);
+  const [policyLoading, setPolicyLoading] = useState(false);
+  const [policyForm, setPolicyForm] = useState<{
+    stamp_board_size: number;
+    daily_points: number;
+    reward_points: number;
+  }>({ stamp_board_size: 10, daily_points: 10, reward_points: 100 });
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const fetchStats = useCallback(async (date: string) => {
     setLoading(true);
@@ -62,9 +70,31 @@ const CheckInAdminPage: React.FC = () => {
     }
   }, []);
 
+  const fetchPolicy = useCallback(async () => {
+    setPolicyLoading(true);
+    try {
+      const data = await getAttendancePolicy();
+      setPolicy(data);
+      setPolicyForm({
+        stamp_board_size: data.stamp_board_size,
+        daily_points: data.daily_points,
+        reward_points: data.reward_points,
+      });
+    } catch (error) {
+      console.error("출석 정책 조회 실패", error);
+      toast.error("출석 정책 정보를 불러오지 못했습니다.");
+    } finally {
+      setPolicyLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchStats(selectedDate);
   }, [selectedDate, fetchStats]);
+
+  useEffect(() => {
+    fetchPolicy();
+  }, [fetchPolicy]);
 
   const chartData = stats
     ? [
@@ -72,6 +102,32 @@ const CheckInAdminPage: React.FC = () => {
         { name: "미출석", value: stats.summary.absent_count },
       ]
     : [];
+
+  const isDirty =
+    policy !== null &&
+    (policyForm.stamp_board_size !== policy.stamp_board_size ||
+      policyForm.daily_points !== policy.daily_points ||
+      policyForm.reward_points !== policy.reward_points);
+
+  const handlePolicySave = async () => {
+    if (!isDirty || isUpdating) return;
+    setIsUpdating(true);
+    try {
+      const updated = await updateAttendancePolicy(policyForm);
+      setPolicy(updated);
+      setPolicyForm({
+        stamp_board_size: updated.stamp_board_size,
+        daily_points: updated.daily_points,
+        reward_points: updated.reward_points,
+      });
+      toast.success("출석 정책이 저장되었습니다.");
+    } catch (error) {
+      console.error("출석 정책 저장 실패", error);
+      toast.error("정책 저장에 실패했습니다.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   return (
     <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 space-y-6">
@@ -156,6 +212,86 @@ const CheckInAdminPage: React.FC = () => {
                 </PieChart>
               </ResponsiveContainer>
             </div>
+          </div>
+
+          {/* 출석 정책 설정 */}
+          <div className="bg-dark-card border border-dark-line rounded-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-dark-line">
+              <h2 className="font-semibold text-dark-text">출석 정책 설정</h2>
+              <p className="text-xs text-dark-muted mt-0.5">변경 사항은 다음 출석 체크부터 적용됩니다.</p>
+            </div>
+            {policyLoading ? (
+              <div className="px-6 py-8 text-center text-sm text-dark-muted">로딩 중...</div>
+            ) : !policy ? (
+              <div className="px-6 py-8 text-center text-sm text-dark-muted">
+                정책 정보를 불러오지 못했습니다.
+              </div>
+            ) : (
+              <div className="px-6 py-5 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs text-dark-muted mb-1.5">스탬프판 칸 수</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={policyForm.stamp_board_size}
+                      onChange={(e) =>
+                        setPolicyForm((prev) => ({
+                          ...prev,
+                          stamp_board_size: Number(e.target.value),
+                        }))
+                      }
+                      className={`w-full ${inputClass}`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-dark-muted mb-1.5">일일 출석 포인트</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={policyForm.daily_points}
+                      onChange={(e) =>
+                        setPolicyForm((prev) => ({
+                          ...prev,
+                          daily_points: Number(e.target.value),
+                        }))
+                      }
+                      className={`w-full ${inputClass}`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-dark-muted mb-1.5">완성 보상 포인트</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={policyForm.reward_points}
+                      onChange={(e) =>
+                        setPolicyForm((prev) => ({
+                          ...prev,
+                          reward_points: Number(e.target.value),
+                        }))
+                      }
+                      className={`w-full ${inputClass}`}
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-dark-muted">
+                  저장하면 이후 출석부터 즉시 반영됩니다. 이전에 지급된 포인트는 변경되지 않습니다.
+                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-dark-muted">
+                    마지막 수정: {format(parseISO(policy.updated_at), "yyyy.MM.dd HH:mm")}
+                  </p>
+                  <button
+                    onClick={handlePolicySave}
+                    disabled={!isDirty || isUpdating}
+                    className="px-4 py-2 text-sm font-medium rounded-lg bg-brand text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                  >
+                    {isUpdating ? "저장 중..." : "저장"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 부원 목록 테이블 */}

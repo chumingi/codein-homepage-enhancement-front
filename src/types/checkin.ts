@@ -60,3 +60,11 @@ export interface AttendanceHistoryResponse {
     current_streak: number;
   };
 }
+
+// GET/PATCH /attendance/admin/policy
+export interface AttendancePolicy {
+  stamp_board_size: number;
+  daily_points: number;
+  reward_points: number;
+  updated_at: string;
+}

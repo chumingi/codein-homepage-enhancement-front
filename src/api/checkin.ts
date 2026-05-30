@@ -6,6 +6,7 @@ import type {
   AdminAttendanceDashboard,
   AttendanceDayRecord,
   AttendanceHistoryResponse,
+  AttendancePolicy,
 } from "../types/checkin";
 
 // 사용자 API 목업
@@ -131,5 +132,29 @@ export const getAdminDailyAttendance = async (
 
   return MOCK_ADMIN_STATS;
   // const res = await api.get<AdminAttendanceDashboard>(`/attendance/admin/status?date=${date}`);
+  // return res.data;
+};
+
+// 관리자 정책 API 목업
+// TODO: 백엔드 완성 후 실 API로 교체
+
+const MOCK_POLICY: AttendancePolicy = {
+  stamp_board_size: 10,
+  daily_points: 10,
+  reward_points: 100,
+  updated_at: `${today}T00:00:00+09:00`,
+};
+
+export const getAttendancePolicy = async (): Promise<AttendancePolicy> => {
+  return MOCK_POLICY;
+  // const res = await api.get<AttendancePolicy>("/attendance/admin/policy");
+  // return res.data;
+};
+
+export const updateAttendancePolicy = async (
+  payload: Omit<AttendancePolicy, "updated_at">,
+): Promise<AttendancePolicy> => {
+  return { ...payload, updated_at: new Date().toISOString() };
+  // const res = await api.patch<AttendancePolicy>("/attendance/admin/policy", payload);
   // return res.data;
 };
