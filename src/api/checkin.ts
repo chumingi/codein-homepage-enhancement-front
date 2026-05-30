@@ -158,3 +158,25 @@ export const updateAttendancePolicy = async (
   // const res = await api.patch<AttendancePolicy>("/attendance/admin/policy", payload);
   // return res.data;
 };
+
+// 관리자 CSV 내보내기 API 목업
+// TODO: 백엔드 완성 후 실 API로 교체
+export const exportAttendanceCsv = async (
+  start_date: string,
+  end_date: string,
+): Promise<Blob> => {
+  // TODO: 백엔드 완성 후 실 API로 교체
+  // const response = await api.get('/attendance/admin/export', {
+  //   params: { start_date, end_date },
+  //   responseType: 'blob',
+  // });
+  // return response.data;
+  const csvContent = [
+    "날짜,닉네임,출석상태,출석시각",
+    `${start_date},부원1,ATTENDED,${start_date}T09:00:00+09:00`,
+    `${start_date},부원2,ABSENT,`,
+    `${end_date},부원1,ATTENDED,${end_date}T08:30:00+09:00`,
+    `${end_date},부원3,ABSENT,`,
+  ].join("\n");
+  return new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+};

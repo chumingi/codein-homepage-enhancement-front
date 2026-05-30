@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { format, parseISO } from "date-fns";
 import { toast } from "react-hot-toast";
-import { Users, CheckCircle, XCircle, TrendingUp } from "lucide-react";
+import { Users, CheckCircle, XCircle, TrendingUp, Download } from "lucide-react";
 import {
   PieChart,
   Pie,
@@ -10,7 +10,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { getAdminDailyAttendance, getAttendancePolicy, updateAttendancePolicy } from "../../api/checkin";
+import { getAdminDailyAttendance, getAttendancePolicy, updateAttendancePolicy, exportAttendanceCsv } from "../../api/checkin";
 import type { AdminAttendanceDashboard, AttendancePolicy } from "../../types/checkin";
 
 // Recharts는 SVG 기반이라 Tailwind 클래스 적용 불가 — 브랜드 토큰과 동일한 값 직접 사용
@@ -56,6 +56,13 @@ const CheckInAdminPage: React.FC = () => {
     reward_points: number;
   }>({ stamp_board_size: 10, daily_points: 10, reward_points: 100 });
   const [isUpdating, setIsUpdating] = useState(false);
+  const [exportStartDate, setExportStartDate] = useState<string>(
+    `${format(new Date(), "yyyy-MM")}-01`,
+  );
+  const [exportEndDate, setExportEndDate] = useState<string>(
+    format(new Date(), "yyyy-MM-dd"),
+  );
+  const [isExporting, setIsExporting] = useState(false);
 
   const fetchStats = useCallback(async (date: string) => {
     setLoading(true);
@@ -108,6 +115,28 @@ const CheckInAdminPage: React.FC = () => {
     (policyForm.stamp_board_size !== policy.stamp_board_size ||
       policyForm.daily_points !== policy.daily_points ||
       policyForm.reward_points !== policy.reward_points);
+
+  const handleExport = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      const blob = await exportAttendanceCsv(exportStartDate, exportEndDate);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `attendance_${exportStartDate}_to_${exportEndDate}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("CSV 내보내기 완료");
+    } catch (error) {
+      console.error("CSV 내보내기 실패", error);
+      toast.error("CSV 내보내기에 실패했습니다.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handlePolicySave = async () => {
     if (!isDirty || isUpdating) return;
@@ -292,6 +321,44 @@ const CheckInAdminPage: React.FC = () => {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* 데이터 내보내기 */}
+          <div className="bg-dark-card border border-dark-line rounded-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-dark-line">
+              <h2 className="font-semibold text-dark-text">데이터 내보내기</h2>
+              <p className="text-xs text-dark-muted mt-0.5">기간별 출석 데이터를 CSV 파일로 다운로드합니다.</p>
+            </div>
+            <div className="px-6 py-5">
+              <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
+                <div>
+                  <label className="block text-xs text-dark-muted mb-1.5">시작일</label>
+                  <input
+                    type="date"
+                    value={exportStartDate}
+                    onChange={(e) => setExportStartDate(e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-dark-muted mb-1.5">종료일</label>
+                  <input
+                    type="date"
+                    value={exportEndDate}
+                    onChange={(e) => setExportEndDate(e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+                <button
+                  onClick={handleExport}
+                  disabled={isExporting}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-brand text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                >
+                  <Download size={15} />
+                  {isExporting ? "다운로드 중..." : "CSV 다운로드"}
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* 부원 목록 테이블 */}
