@@ -51,8 +51,13 @@ const BoardListPage: React.FC = () => {
     const fetchBoards = async () => {
       try {
         const data = await getBoards();
-        const visibleBoards = data.filter((board) => 
-          board.board_type === 'general' || board.board_type === 'notice' || board.board_type === 'qna'
+        const visibleBoards = data.filter(
+          (board) =>
+            board.board_type === 'general' ||
+            board.board_type === 'notice' ||
+            board.board_type === 'qna' ||
+            board.board_type === 'project' ||
+            board.board_type === 'blog'
         );
         setBoards(visibleBoards);
 
