@@ -228,6 +228,11 @@ const CheckInPage: React.FC = () => {
   };
 
   const handleNextMonth = () => {
+    const now = new Date();
+    if (
+      historyYear > now.getFullYear() ||
+      (historyYear === now.getFullYear() && historyMonth >= now.getMonth() + 1)
+    ) return;
     if (historyMonth === 12) {
       setHistoryYear((y) => y + 1);
       setHistoryMonth(1);
@@ -490,7 +495,7 @@ const CheckInPage: React.FC = () => {
             <p className="text-dark-muted text-sm mb-1">출석판을 모두 채웠습니다.</p>
             <p className="text-brand font-semibold text-sm mb-6">
               {rewardPoints !== null
-                ? `보상 ${rewardPoints}포인트 지급`
+                ? `오늘 총 ${rewardPoints}포인트 획득!`
                 : "보상 포인트가 지급됐습니다."}
             </p>
             <button
