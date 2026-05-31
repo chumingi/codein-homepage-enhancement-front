@@ -10,7 +10,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
-import axios from "axios";
+import { isAxiosError } from "axios";
 import {
   getTodayCheckInStatus,
   checkIn,
@@ -18,7 +18,7 @@ import {
 } from "../../api/checkin";
 import type {
   AttendanceStatus,
-  AttendanceHistoryResponse,
+  AttendanceHistoryItem,
 } from "../../types/checkin";
 
 // TodayCheckInCard
@@ -206,7 +206,7 @@ const CheckInPage: React.FC = () => {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [historyYear, setHistoryYear] = useState(() => new Date().getFullYear());
   const [historyMonth, setHistoryMonth] = useState(() => new Date().getMonth() + 1);
-  const [history, setHistory] = useState<AttendanceHistoryResponse | null>(null);
+  const [history, setHistory] = useState<AttendanceHistoryItem[] | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
 
   const fetchHistory = useCallback(async (year: number, month: number) => {
@@ -286,7 +286,7 @@ const CheckInPage: React.FC = () => {
         setShowRewardModal(true);
       }
     } catch (error: unknown) {
-      if (axios.isAxiosError(error) && error.response?.status === 400) {
+      if (isAxiosError(error) && error.response?.status === 400) {
         toast.error("오늘은 이미 출석하셨습니다.");
         // 400은 실제로 이미 출석된 상태 — 낙관적 업데이트 유지 (롤백하지 않음)
       } else {
@@ -443,10 +443,7 @@ const CheckInPage: React.FC = () => {
                       new Date(historyYear, historyMonth - 1, day),
                       "yyyy-MM-dd",
                     );
-                    const record = history?.records.find(
-                      (r) => r.date === dateStr,
-                    );
-                    const isAttended = record?.checked_in === true;
+                    const isAttended = history?.some((item) => item.date === dateStr) ?? false;
                     const isToday = dateStr === todayStr;
 
                     return (
@@ -478,20 +475,10 @@ const CheckInPage: React.FC = () => {
                   })}
                 </div>
 
-                {history && (
-                  <div className="mt-4 pt-4 border-t border-dark-line flex items-center justify-between text-xs text-dark-muted">
-                    <span>
-                      이번 달 출석:{" "}
-                      <span className="text-dark-text font-medium">
-                        {history.records.filter((r) => r.checked_in).length}일
-                      </span>
-                    </span>
-                    <span>
-                      누적 출석:{" "}
-                      <span className="text-dark-text font-medium">
-                        {history.summary.total_attended}일
-                      </span>
-                    </span>
+                {history !== null && (
+                  <div className="mt-4 pt-4 border-t border-dark-line text-xs text-dark-muted">
+                    이번 달 출석:{" "}
+                    <span className="text-dark-text font-medium">{history.length}일</span>
                   </div>
                 )}
               </>

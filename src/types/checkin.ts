@@ -18,7 +18,7 @@ export interface AttendanceCheckResult {
   streak?: number; // 연속 출석 일수 (2단계)
 }
 
-// GET /attendance/me/history 아이템 (2단계)
+// GET /attendance/me/history 응답 아이템 (출석한 날만 포함, 미출석 날은 배열에 없음)
 export interface AttendanceHistoryItem {
   date: string;            // "YYYY-MM-DD"
   attended_at: string;
@@ -41,24 +41,6 @@ export interface AdminMemberAttendance {
   nickname: string;
   status: "ATTENDED" | "ABSENT";
   attended_at: string | null;
-}
-
-// GET /attendance/me?year=&month= 응답 아이템 (2단계)
-export interface AttendanceDayRecord {
-  date: string;           // "YYYY-MM-DD"
-  checked_in: boolean;
-  checked_in_at?: string; // ISO datetime — 출석한 날만 존재
-  points_earned?: number;
-}
-
-export interface AttendanceHistoryResponse {
-  year: number;
-  month: number;
-  records: AttendanceDayRecord[];
-  summary: {
-    total_attended: number;
-    current_streak: number;
-  };
 }
 
 // GET/PATCH /attendance/admin/policy

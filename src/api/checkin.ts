@@ -4,8 +4,7 @@ import type {
   AttendanceStatus,
   AttendanceCheckResult,
   AdminAttendanceDashboard,
-  AttendanceDayRecord,
-  AttendanceHistoryResponse,
+  AttendanceHistoryItem,
   AttendancePolicy,
 } from "../types/checkin";
 
@@ -49,35 +48,23 @@ export const checkIn = async (): Promise<AttendanceCheckResult> => {
 export const getMyAttendanceHistory = async (
   year: number,
   month: number,
-): Promise<AttendanceHistoryResponse> => {
+): Promise<AttendanceHistoryItem[]> => {
   const daysInMonth = getDaysInMonth(new Date(year, month - 1));
-  const records: AttendanceDayRecord[] = [];
+  const items: AttendanceHistoryItem[] = [];
 
   for (let day = 1; day <= daysInMonth; day++) {
-    const date = format(new Date(year, month - 1, day), "yyyy-MM-dd");
-    const isCheckedIn = day % 3 !== 0;
-    records.push({
-      date,
-      checked_in: isCheckedIn,
-      ...(isCheckedIn && {
-        checked_in_at: `${date}T09:${String(day).padStart(2, "0")}:00+09:00`,
-        points_earned: 10,
-      }),
-    });
+    if (day % 3 !== 0) { // ~67% 출석률 시뮬레이션 — 출석한 날만 배열에 추가
+      const date = format(new Date(year, month - 1, day), "yyyy-MM-dd");
+      items.push({
+        date,
+        attended_at: `${date}T09:${String(day).padStart(2, "0")}:00+09:00`,
+        earned_points: 10,
+      });
+    }
   }
 
-  const totalAttended = records.filter((r) => r.checked_in).length;
-
-  return {
-    year,
-    month,
-    records,
-    summary: {
-      total_attended: totalAttended,
-      current_streak: 3,
-    },
-  };
-  // const response = await api.get<AttendanceHistoryResponse>("/attendance/me", {
+  return items;
+  // const response = await api.get<AttendanceHistoryItem[]>("/attendance/me/history", {
   //   params: { year, month },
   // });
   // return response.data;
