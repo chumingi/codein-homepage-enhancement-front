@@ -21,7 +21,7 @@ const CHART_COLORS = {
 
 const inputClass =
   "rounded-lg border border-dark-line bg-dark-cardSoft px-3 py-2 text-sm text-dark-text " +
-  "focus:outline-none focus:border-brand dark:[color-scheme:dark]";
+  "focus:outline-none focus:border-brand [color-scheme:dark]";
 
 interface StatCardProps {
   icon: React.ReactNode;
@@ -179,7 +179,18 @@ const CheckInAdminPage: React.FC = () => {
 
       {loading ? (
         <div className="text-center py-20 text-dark-muted">로딩 중...</div>
-      ) : !stats ? null : (
+      ) : !stats ? (
+        <div className="text-center py-20">
+          <p className="text-dark-muted mb-3">출석 현황을 불러오지 못했습니다.</p>
+          <button
+            type="button"
+            onClick={() => fetchStats(selectedDate)}
+            className="text-brand text-sm hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded"
+          >
+            다시 시도하기
+          </button>
+        </div>
+      ) : (
         <>
           {/* 통계 카드 + 도넛 차트 */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -243,124 +254,6 @@ const CheckInAdminPage: React.FC = () => {
             </div>
           </div>
 
-          {/* 출석 정책 설정 */}
-          <div className="bg-dark-card border border-dark-line rounded-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-dark-line">
-              <h2 className="font-semibold text-dark-text">출석 정책 설정</h2>
-              <p className="text-xs text-dark-muted mt-0.5">변경 사항은 다음 출석 체크부터 적용됩니다.</p>
-            </div>
-            {policyLoading ? (
-              <div className="px-6 py-8 text-center text-sm text-dark-muted">로딩 중...</div>
-            ) : !policy ? (
-              <div className="px-6 py-8 text-center text-sm text-dark-muted">
-                정책 정보를 불러오지 못했습니다.
-              </div>
-            ) : (
-              <div className="px-6 py-5 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs text-dark-muted mb-1.5">스탬프판 칸 수</label>
-                    <input
-                      type="number"
-                      min={1}
-                      value={policyForm.stamp_board_size}
-                      onChange={(e) =>
-                        setPolicyForm((prev) => ({
-                          ...prev,
-                          stamp_board_size: Number(e.target.value),
-                        }))
-                      }
-                      className={`w-full ${inputClass}`}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-dark-muted mb-1.5">일일 출석 포인트</label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={policyForm.daily_points}
-                      onChange={(e) =>
-                        setPolicyForm((prev) => ({
-                          ...prev,
-                          daily_points: Number(e.target.value),
-                        }))
-                      }
-                      className={`w-full ${inputClass}`}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-dark-muted mb-1.5">완성 보상 포인트</label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={policyForm.reward_points}
-                      onChange={(e) =>
-                        setPolicyForm((prev) => ({
-                          ...prev,
-                          reward_points: Number(e.target.value),
-                        }))
-                      }
-                      className={`w-full ${inputClass}`}
-                    />
-                  </div>
-                </div>
-                <p className="text-xs text-dark-muted">
-                  저장하면 이후 출석부터 즉시 반영됩니다. 이전에 지급된 포인트는 변경되지 않습니다.
-                </p>
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-dark-muted">
-                    마지막 수정: {format(parseISO(policy.updated_at), "yyyy.MM.dd HH:mm")}
-                  </p>
-                  <button
-                    onClick={handlePolicySave}
-                    disabled={!isDirty || isUpdating}
-                    className="px-4 py-2 text-sm font-medium rounded-lg bg-brand text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                  >
-                    {isUpdating ? "저장 중..." : "저장"}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* 데이터 내보내기 */}
-          <div className="bg-dark-card border border-dark-line rounded-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-dark-line">
-              <h2 className="font-semibold text-dark-text">데이터 내보내기</h2>
-              <p className="text-xs text-dark-muted mt-0.5">기간별 출석 데이터를 CSV 파일로 다운로드합니다.</p>
-            </div>
-            <div className="px-6 py-5">
-              <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
-                <div>
-                  <label className="block text-xs text-dark-muted mb-1.5">시작일</label>
-                  <input
-                    type="date"
-                    value={exportStartDate}
-                    onChange={(e) => setExportStartDate(e.target.value)}
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-dark-muted mb-1.5">종료일</label>
-                  <input
-                    type="date"
-                    value={exportEndDate}
-                    onChange={(e) => setExportEndDate(e.target.value)}
-                    className={inputClass}
-                  />
-                </div>
-                <button
-                  onClick={handleExport}
-                  disabled={isExporting}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-brand text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                >
-                  <Download size={15} />
-                  {isExporting ? "다운로드 중..." : "CSV 다운로드"}
-                </button>
-              </div>
-            </div>
-          </div>
-
           {/* 부원 목록 테이블 */}
           <div className="bg-dark-card border border-dark-line rounded-2xl overflow-hidden">
             <div className="px-6 py-4 border-b border-dark-line">
@@ -418,6 +311,124 @@ const CheckInAdminPage: React.FC = () => {
           </div>
         </>
       )}
+
+      {/* 출석 정책 설정 */}
+      <div className="bg-dark-card border border-dark-line rounded-2xl overflow-hidden">
+        <div className="px-6 py-4 border-b border-dark-line">
+          <h2 className="font-semibold text-dark-text">출석 정책 설정</h2>
+          <p className="text-xs text-dark-muted mt-0.5">변경 사항은 다음 출석 체크부터 적용됩니다.</p>
+        </div>
+        {policyLoading ? (
+          <div className="px-6 py-8 text-center text-sm text-dark-muted">로딩 중...</div>
+        ) : !policy ? (
+          <div className="px-6 py-8 text-center text-sm text-dark-muted">
+            정책 정보를 불러오지 못했습니다.
+          </div>
+        ) : (
+          <div className="px-6 py-5 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs text-dark-muted mb-1.5">스탬프판 칸 수</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={policyForm.stamp_board_size}
+                  onChange={(e) =>
+                    setPolicyForm((prev) => ({
+                      ...prev,
+                      stamp_board_size: Number(e.target.value),
+                    }))
+                  }
+                  className={`w-full ${inputClass}`}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-dark-muted mb-1.5">일일 출석 포인트</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={policyForm.daily_points}
+                  onChange={(e) =>
+                    setPolicyForm((prev) => ({
+                      ...prev,
+                      daily_points: Number(e.target.value),
+                    }))
+                  }
+                  className={`w-full ${inputClass}`}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-dark-muted mb-1.5">완성 보상 포인트</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={policyForm.reward_points}
+                  onChange={(e) =>
+                    setPolicyForm((prev) => ({
+                      ...prev,
+                      reward_points: Number(e.target.value),
+                    }))
+                  }
+                  className={`w-full ${inputClass}`}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-dark-muted">
+              저장하면 이후 출석부터 즉시 반영됩니다. 이전에 지급된 포인트는 변경되지 않습니다.
+            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-dark-muted">
+                마지막 수정: {format(parseISO(policy.updated_at), "yyyy.MM.dd HH:mm")}
+              </p>
+              <button
+                onClick={handlePolicySave}
+                disabled={!isDirty || isUpdating}
+                className="px-4 py-2 text-sm font-medium rounded-lg bg-brand text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              >
+                {isUpdating ? "저장 중..." : "저장"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 데이터 내보내기 */}
+      <div className="bg-dark-card border border-dark-line rounded-2xl overflow-hidden">
+        <div className="px-6 py-4 border-b border-dark-line">
+          <h2 className="font-semibold text-dark-text">데이터 내보내기</h2>
+          <p className="text-xs text-dark-muted mt-0.5">기간별 출석 데이터를 CSV 파일로 다운로드합니다.</p>
+        </div>
+        <div className="px-6 py-5">
+          <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
+            <div>
+              <label className="block text-xs text-dark-muted mb-1.5">시작일</label>
+              <input
+                type="date"
+                value={exportStartDate}
+                onChange={(e) => setExportStartDate(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-dark-muted mb-1.5">종료일</label>
+              <input
+                type="date"
+                value={exportEndDate}
+                onChange={(e) => setExportEndDate(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <button
+              onClick={handleExport}
+              disabled={isExporting}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-brand text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
+              <Download size={15} />
+              {isExporting ? "다운로드 중..." : "CSV 다운로드"}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
