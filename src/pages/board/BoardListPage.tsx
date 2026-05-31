@@ -6,6 +6,8 @@ import { useAuth } from '../../context/AuthContext';
 import { Megaphone, MessageSquare, ChevronRight, Home, PencilLine, Eye } from 'lucide-react';
 import { BoardTabs } from '../../components/BoardTabs';
 import type { TabType } from '../../components/BoardTabs';
+/* 🌟 수정 포인트(7번): 프로젝트 규칙에 맞춘 date-fns 라이브러리 import */
+import { format, parseISO } from 'date-fns';
 
 const getPreferredBoardId = (availableBoards: Board[], search: string) => {
   if (availableBoards.length === 0) return null;
@@ -82,9 +84,11 @@ const BoardListPage: React.FC = () => {
       const generalBoard = boards.find(b => b.board_type === 'general');
       if (generalBoard) targetId = generalBoard.id;
     } else if (currentTab === 'project') {
-      targetId = 2; 
+      const projectBoard = boards.find(b => b.board_type === 'project');
+      if (projectBoard) targetId = projectBoard.id;
     } else if (currentTab === 'blog') {
-      targetId = 3; 
+      const blogBoard = boards.find(b => b.board_type === 'blog');
+      if (blogBoard) targetId = blogBoard.id;
     }
 
     if (targetId && targetId !== selectedBoardId) {
@@ -136,9 +140,9 @@ const BoardListPage: React.FC = () => {
     return badges.length > 0 ? <>{badges}</> : null;
   };
 
+  /* 🌟 수정 포인트(7번): date-fns를 활용하여 프로젝트 규칙에 맞게 날짜 포맷 구현 */
   const formatPostDate = (value: string) => {
-    const date = new Date(value);
-    return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
+    return format(parseISO(value), 'yyyy.MM.dd');
   };
 
   const sortedPosts = [...posts].sort((a, c) => {
@@ -153,8 +157,8 @@ const BoardListPage: React.FC = () => {
   });
 
   const handleLikeClick = (e: React.MouseEvent, postId: number, currentLikes: number) => {
-    e.preventDefault(); // 링크 이동 막기
-    e.stopPropagation(); // 부모 클릭 이벤트 전파 막기
+    e.preventDefault(); 
+    e.stopPropagation(); 
 
     setLocalLikes((prev) => {
       const currentData = prev[postId] || { count: currentLikes, liked: false };
@@ -166,7 +170,6 @@ const BoardListPage: React.FC = () => {
         [postId]: { count: nextCount, liked: nextLiked },
       };
       
-      // 나갔다 와도 유지되도록 브라우저 창고에 저장!
       localStorage.setItem('codein_board_likes', JSON.stringify(updated));
       return updated;
     });
@@ -203,7 +206,8 @@ const BoardListPage: React.FC = () => {
             </p>
           </div>
         </div>
-        {user && selectedBoardId !== 2 && (
+        
+        {user && (
           <Link
             to={`/board/write?category=${currentTab}`}
             state={{ boardId: selectedBoardId }}
@@ -237,8 +241,9 @@ const BoardListPage: React.FC = () => {
               <div key={post.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden hover:-translate-y-1 hover:shadow-md transition-all duration-200">
                 <Link to={`/board/${selectedBoardId}/post/${post.id}`} state={{ boardId: selectedBoardId }} className="block">
                   <div className="w-full h-44 overflow-hidden bg-gray-50">
+                    {/* 🌟 수정 포인트(6번): (post as any).thumbnail_url 에서 임의의 any 캐스팅 전면 제거! */}
                     <img 
-                      src={(post as any).thumbnail_url || 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=400'} 
+                      src={post.thumbnail_url || 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=400'} 
                       alt="썸네일" 
                       className="w-full h-full object-cover"
                     />
@@ -246,7 +251,6 @@ const BoardListPage: React.FC = () => {
                   <div className="p-4">
                     <div className="flex items-center justify-between mb-1.5">
                       <div>{getNoticeBadge(post.notice_type, post.is_blinded)}</div>
-                      {/* 카드 하단 하트 버튼 */}
                       <button
                         onClick={(e) => handleLikeClick(e, post.id, post.view_count || 0)}
                         className={`flex items-center gap-1 text-xs font-semibold transition-colors ${likeInfo.liked ? 'text-red-500' : 'text-gray-400 hover:text-red-400'}`}
@@ -291,7 +295,6 @@ const BoardListPage: React.FC = () => {
                       </div>
                       
                       <div className="flex items-center gap-4 ml-4">
-                        {/* 리스트 우측 하트 버튼 */}
                         <button
                           onClick={(e) => handleLikeClick(e, post.id, post.view_count || 0)}
                           className={`flex items-center gap-1 text-xs font-semibold p-1.5 rounded-lg transition-colors ${

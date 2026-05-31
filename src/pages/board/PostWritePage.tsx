@@ -16,10 +16,9 @@ const PostWritePage: React.FC = () => {
   const initialTitle = searchParams.get('title') || '';
   const initialContent = searchParams.get('content') || '';
   
-  // 🌟 URL에서 현재 카테고리(free, project, blog 등) 감지
+  // URL에서 넘어온 카테고리 기본값 (초기 매핑 보조용)
   const currentCategory = searchParams.get('category') || 'free';
 
-  // 안전장치: location.state가 없어도 터지지 않게 보호
   const locationState = location.state || {};
 
   const [boards, setBoards] = useState<Board[]>([]);
@@ -30,7 +29,6 @@ const PostWritePage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
 
-  // 🌟 깃허브 및 썸네일 입력 상태 추가
   const [githubUrl, setGithubUrl] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
 
@@ -50,6 +48,10 @@ const PostWritePage: React.FC = () => {
     ? boards
     : boards.filter((board) => !board.name.includes('공지'));
 
+  /* 🌟 수정 포인트(4번, 5번): 현재 드롭다운에서 사용자가 '실시간 선택한' 게시판의 board_type을 추적 */
+  const currentSelectedBoard = boards.find((board) => board.id === boardId);
+  const selectedBoardType = currentSelectedBoard?.board_type;
+
   useEffect(() => {
     const fetchBoards = async () => {
       try {
@@ -58,8 +60,20 @@ const PostWritePage: React.FC = () => {
         const filteredBoards = isStaffOrAdmin
           ? data
           : data.filter((board) => !board.name.includes('공지'));
+        
         if (filteredBoards.length > 0) {
-          if (!boardId || !filteredBoards.some((board) => board.id === boardId)) {
+          // 수정 모드가 아니고, 기존 전달된 boardId가 없을 때 카테고리 기반 자동 초기값 설정 (5번 보완)
+          if (!isEditMode && !locationState.boardId) {
+            let matchedInitialBoard = filteredBoards[0];
+            if (currentCategory === 'project') {
+              matchedInitialBoard = filteredBoards.find(b => b.board_type === 'project') || filteredBoards[0];
+            } else if (currentCategory === 'blog') {
+              matchedInitialBoard = filteredBoards.find(b => b.board_type === 'blog') || filteredBoards[0];
+            } else if (currentCategory === 'free') {
+              matchedInitialBoard = filteredBoards.find(b => b.board_type === 'general') || filteredBoards[0];
+            }
+            setBoardId(matchedInitialBoard.id);
+          } else if (!boardId || !filteredBoards.some((board) => board.id === boardId)) {
             setBoardId(filteredBoards[0].id);
           }
         }
@@ -80,15 +94,16 @@ const PostWritePage: React.FC = () => {
       };
       fetchTemplates();
     }
-  }, [boardId, isStaffOrAdmin]);
+  }, [isStaffOrAdmin]); // 무한 루프 방지를 위해 의존성 배열에서 boardId 제외 및 최적화
 
   useEffect(() => {
     if (isEditMode && editPost) {
       setBoardId(editPost.board_id);
       setTitle(editPost.title);
       setContent(editPost.content);
-      if ((editPost as any).github_url) setGithubUrl((editPost as any).github_url);
-      if ((editPost as any).thumbnail_url) setThumbnailUrl((editPost as any).thumbnail_url);
+      /* 🌟 수정 포인트(6번): any 없이 정식 정의될 post 필드로 안전하게 세팅 */
+      if (editPost.github_url) setGithubUrl(editPost.github_url);
+      if (editPost.thumbnail_url) setThumbnailUrl(editPost.thumbnail_url);
 
       if (editPost.notice_type) {
         setShowAnnouncementOptions(true);
@@ -127,13 +142,13 @@ const PostWritePage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      // strict 규칙을 위반하지 않도록 타입 단언(as) 결합
-      const payload = {
+      /* 🌟 수정 포인트(4, 6번): any 캐스팅을 지우고 정식 확장 타입을 선언하여 할당 */
+      const payload: CreatePostPayload = {
         title,
         content,
         board_id: boardId,
-        github_url: currentCategory === 'project' ? githubUrl : undefined,
-        thumbnail_url: currentCategory === 'blog' ? thumbnailUrl : undefined,
+        github_url: selectedBoardType === 'project' ? githubUrl : undefined,
+        thumbnail_url: selectedBoardType === 'blog' ? thumbnailUrl : undefined,
         ...(showAnnouncementOptions ? {
           notice_type: noticeType,
           target_audience: targetAudience,
@@ -142,13 +157,13 @@ const PostWritePage: React.FC = () => {
           expires_at: expiresAt || undefined,
           is_pinned: isPinned
         } : {})
-      } as CreatePostPayload & { github_url?: string; thumbnail_url?: string };
+      };
 
       let post;
       if (isEditMode && editPost) {
-        post = await updatePost(boardId, editPost.id, payload as any);
+        post = await updatePost(boardId, editPost.id, payload);
       } else {
-        post = await createPost(boardId, payload as any);
+        post = await createPost(boardId, payload);
       }
 
       if (files.length > 0) {
@@ -205,8 +220,8 @@ const PostWritePage: React.FC = () => {
           />
         </div>
 
-        {/* 🌟 카테고리별 조건부 인풋란 배치 구역 */}
-        {currentCategory === 'project' && (
+        {/* 🌟 수정 포인트(4번): URL의 query가 아닌 실시간으로 잡히는 selectedBoardType 기준으로 인풋 토글 */}
+        {selectedBoardType === 'project' && (
           <div className="mb-4 text-left">
             <label className="block text-gray-700 text-sm font-bold mb-2">
               🐙 GitHub 주소
@@ -221,7 +236,7 @@ const PostWritePage: React.FC = () => {
           </div>
         )}
 
-        {currentCategory === 'blog' && (
+        {selectedBoardType === 'blog' && (
           <div className="mb-4 text-left">
             <label className="block text-gray-700 text-sm font-bold mb-2">
               🖼️ 블로그 썸네일 이미지 주소
