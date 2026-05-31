@@ -4,7 +4,6 @@ export interface AttendanceStatus {
   current_stamp_cycle: number;
   current_stamp_count: number;
   max_stamp_pieces: number;
-  streak?: number; // 연속 출석 일수 (2단계)
 }
 
 // POST /attendance/me/check (200 OK)
@@ -15,7 +14,6 @@ export interface AttendanceCheckResult {
   current_stamp_count: number;
   is_board_completed: boolean;
   message: string;
-  streak?: number; // 연속 출석 일수 (2단계)
 }
 
 // GET /attendance/me/history 응답 아이템 (출석한 날만 포함, 미출석 날은 배열에 없음)

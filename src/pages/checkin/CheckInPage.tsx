@@ -4,7 +4,6 @@ import {
   CheckCircle,
   Calendar,
   Zap,
-  Flame,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -98,7 +97,6 @@ interface StampBoardProps {
   boardSize: number;
   currentCycle: number;
   progress: number;
-  streak?: number;
   newlyFilledIndex?: number | null;
   onAnimationEnd?: () => void;
   isHistoryOpen: boolean;
@@ -109,7 +107,6 @@ const StampBoard: React.FC<StampBoardProps> = ({
   boardSize,
   currentCycle,
   progress,
-  streak,
   newlyFilledIndex,
   onAnimationEnd,
   isHistoryOpen,
@@ -157,18 +154,12 @@ const StampBoard: React.FC<StampBoardProps> = ({
           ))}
       </div>
 
-      <div className="flex items-center justify-center gap-3">
+      <div className="flex items-center justify-center">
         <p className="text-xs text-dark-muted">
           {remaining > 0
             ? `${remaining}칸 더 채우면 보상을 받아요`
             : "스탬프 보드 완성! 보상이 지급됩니다."}
         </p>
-        {streak !== undefined && streak > 0 && (
-          <span className="inline-flex items-center gap-1 text-xs text-orange-400">
-            <Flame size={12} aria-hidden="true" />
-            {streak}일 연속
-          </span>
-        )}
       </div>
 
       <button
@@ -275,7 +266,6 @@ const CheckInPage: React.FC = () => {
         ...prev,
         has_attended_today: true,
         current_stamp_count: result.current_stamp_count,
-        ...(result.streak !== undefined && { streak: result.streak }),
       });
       setCheckedInAt(result.attended_at);
       setPointsEarned(result.earned_points);
@@ -367,7 +357,6 @@ const CheckInPage: React.FC = () => {
           boardSize={status.max_stamp_pieces}
           currentCycle={status.current_stamp_cycle}
           progress={status.current_stamp_count}
-          streak={status.streak}
           newlyFilledIndex={newlyFilledIndex}
           onAnimationEnd={() => setNewlyFilledIndex(null)}
           isHistoryOpen={isHistoryOpen}
