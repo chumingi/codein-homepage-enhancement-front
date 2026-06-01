@@ -33,6 +33,7 @@ const ReportsPage = lazy(() => import('./pages/admin/ReportsPage'));
 const ReportDetailPage = lazy(() => import('./pages/admin/ReportDetailPage'));
 const SearchPage = lazy(() => import('./pages/SearchPage'));
 const CreatorsPage = lazy(() => import('./pages/CreatorsPage'));
+const GuidePage = lazy(() => import('./pages/guide/GuidePage'));
 
 type Theme = 'dark' | 'light';
 
@@ -147,6 +148,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/creators" element={<CreatorsPage />} />
+            <Route path="/guide" element={<GuidePage />} />
             <Route path="/board" element={<BoardListPage />} />
             <Route path="/boards" element={<Navigate to="/board" replace />} />
             <Route path="/gallery/share/:token" element={<SharedAlbumPage />} />
