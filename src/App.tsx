@@ -33,6 +33,10 @@ const ReportsPage = lazy(() => import('./pages/admin/ReportsPage'));
 const ReportDetailPage = lazy(() => import('./pages/admin/ReportDetailPage'));
 const SearchPage = lazy(() => import('./pages/SearchPage'));
 const CreatorsPage = lazy(() => import('./pages/CreatorsPage'));
+const CheckInPage = lazy(() => import('./pages/checkin/CheckInPage'));
+const CheckInAdminPage = lazy(() => import('./pages/admin/CheckInAdminPage'));
+const ActivityListPage = lazy(() => import('./pages/recruitment/ActivityListPage'));
+const ActivityDetailPage = lazy(() => import('./pages/recruitment/ActivityDetailPage'));
 
 type Theme = 'dark' | 'light';
 
@@ -172,7 +176,9 @@ function App() {
             <Route path="/calendar" element={<Navigate to="/events" replace />} />
             <Route path="/events/:eventId" element={<EventDetailPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
-            <Route path="/check-in" element={<div className="text-center mt-10">Check-in Page (Coming Soon)</div>} />
+            <Route path="/check-in" element={<CheckInPage />} />
+            <Route path="/recruitment" element={<ActivityListPage />} />
+            <Route path="/recruitment/:id" element={<ActivityDetailPage />} />
           </Route>
 
           <Route element={<AdminRoute />}>
@@ -182,6 +188,7 @@ function App() {
             <Route path="/admin/problem-bank" element={<ProblemBankAdminPage />} />
             <Route path="/admin/reports" element={<ReportsPage />} />
             <Route path="/admin/reports/:reportId" element={<ReportDetailPage />} />
+            <Route path="/admin/check-in" element={<CheckInAdminPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

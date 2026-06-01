@@ -506,6 +506,22 @@ const PostDetailPage: React.FC = () => {
           {post.content}
         </div>
 
+        {post.github_url && (
+          <div className="mt-6 p-4 bg-dark-cardSoft rounded-lg border border-dark-line flex items-center justify-between shadow-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-dark-text">🔗 GitHub 소스코드</span>
+            </div>
+            <a
+              href={post.github_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-dark-bg hover:bg-dark-card text-dark-text border border-dark-line font-bold py-2 px-4 rounded-lg text-sm transition-colors"
+            >
+              저장소 방문하기
+            </a>
+          </div>
+        )}
+
         {/* 첨부파일 섹션 */}
         {post.attachments && post.attachments.length > 0 && (
           <div className="mt-6 border-t pt-4">

@@ -64,6 +64,7 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
           </NavLink>
           <NavLink to="/contest/history" className="nav-item text-sm font-medium text-dark-muted hover:text-dark-text transition-colors px-2.5 py-2 rounded-xl hover:bg-dark-nav">제출내역</NavLink>
           <NavLink to="/creators" className="nav-item text-sm font-medium text-dark-muted hover:text-dark-text transition-colors px-2.5 py-2 rounded-xl hover:bg-dark-nav">만든사람들</NavLink>
+          <NavLink to="/check-in" className="nav-item text-sm font-medium text-dark-muted hover:text-dark-text transition-colors px-2.5 py-2 rounded-xl hover:bg-dark-nav">출석</NavLink>
           <NavLink to="/profile" className="nav-item text-sm font-medium text-dark-muted hover:text-dark-text transition-colors px-2.5 py-2 rounded-xl hover:bg-dark-nav">마이페이지</NavLink>
         </div>
 
@@ -176,6 +177,14 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
                           >
                             <span className="inline-flex h-4 w-4 items-center justify-center text-[10px] font-semibold text-brand">!</span>
                             신고 관리
+                          </Link>
+                          <Link
+                            to="/admin/check-in"
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-dark-muted hover:bg-dark-nav hover:text-dark-text transition-colors"
+                            onClick={() => setIsDropdownOpen(false)}
+                          >
+                            <span className="inline-flex h-4 w-4 items-center justify-center text-[10px] font-semibold text-brand">✓</span>
+                            출석 관리
                           </Link>
                         </>
                       )}

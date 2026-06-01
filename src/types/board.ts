@@ -23,6 +23,8 @@ export interface Post {
   id: number;
   title: string;
   content: string;
+  github_url?: string;
+  thumbnail_url?: string;
   board_id: number;
   author_id: number;
   template_id?: number | null;
@@ -45,6 +47,11 @@ export interface Post {
   
   read_count?: number;
   is_read?: boolean;
+
+  // Swagger BoardListItem 기준 응답 필드
+  tech_stack?: string[];
+  has_github?: boolean;
+  comment_count?: number;
 }
 
 export interface CreatePostPayload {
@@ -52,12 +59,18 @@ export interface CreatePostPayload {
   content?: string;
   template_id?: number;
   board_id?: number;
+  github_url?: string;
+  thumbnail_url?: string; // Swagger BoardCreate 미정의 — 백엔드팀 확인 필요
   notice_type?: string;
   target_audience?: string;
   target_ranks?: string[];
   scheduled_at?: string;
   expires_at?: string;
   is_pinned?: boolean;
+  // Swagger BoardCreate 기준 프로젝트 전용 필드 (백엔드 연동 후 활성화)
+  // tech_stack?: string[];
+  // period?: string;
+  // team_info?: string;
 }
 
 export type UpdatePostPayload = Partial<CreatePostPayload>;
