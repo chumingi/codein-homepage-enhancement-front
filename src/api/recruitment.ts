@@ -31,7 +31,7 @@ const MOCK_DETAIL: ActivityDetail = {
 
 export const getActivities = async (params: ActivityListParams): Promise<ActivityListResponse> => {
   // TODO: 실 API 교체
-  // const response = await api.get<ActivityListResponse>('/recruitment', { params });
+  // const response = await api.get<ActivityListResponse>('/activities', { params });
   // return response.data;
   void api; void params;
   return { items: MOCK_ITEMS, total: MOCK_ITEMS.length };
@@ -39,27 +39,27 @@ export const getActivities = async (params: ActivityListParams): Promise<Activit
 
 export const getActivity = async (id: number): Promise<ActivityDetail> => {
   // TODO: 실 API 교체
-  // const response = await api.get<ActivityDetail>(`/recruitment/${id}`);
+  // const response = await api.get<ActivityDetail>(`/activities/${id}`);
   // return response.data;
   void id;
   return MOCK_DETAIL;
 };
 
 export const applyActivity = async (id: number, payload: ApplyActivityPayload): Promise<void> => {
-  // TODO: 실 API 교체
-  // await api.post(`/recruitment/${id}/apply`, payload);
+  // TODO: 실 API 교체 — Swagger required: [message]. 연동 시 ApplyActivityPayload.message를 required로 변경
+  // await api.post(`/activities/${id}/apply`, payload);
   void id; void payload;
 };
 
 export const cancelApplication = async (id: number): Promise<void> => {
   // TODO: 실 API 교체
-  // await api.delete(`/recruitment/${id}/apply`);
+  // await api.delete(`/activities/${id}/apply`);
   void id;
 };
 
 export const getApplications = async (id: number): Promise<ApplicationItem[]> => {
   // TODO: 실 API 교체
-  // const response = await api.get<ApplicationItem[]>(`/recruitment/${id}/applications`);
+  // const response = await api.get<ApplicationItem[]>(`/activities/${id}/applications`);
   // return response.data;
   void id;
   return [];
@@ -71,6 +71,6 @@ export const updateApplicationStatus = async (
   status: 'APPROVED' | 'REJECTED',
 ): Promise<void> => {
   // TODO: 실 API 교체
-  // await api.patch(`/recruitment/${activityId}/applications/${applicantId}`, { status });
+  // await api.patch(`/activities/${activityId}/applications/${applicantId}`, { status });
   void activityId; void applicantId; void status;
 };
