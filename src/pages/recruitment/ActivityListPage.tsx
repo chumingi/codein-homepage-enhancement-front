@@ -22,9 +22,9 @@ const TYPE_COLOR: Record<RecruitmentType, string> = {
 };
 
 const STATUS_LABELS: Record<RecruitmentStatus, { label: string; className: string }> = {
-  RECRUITING: { label: '모집 중', className: 'bg-green-100 text-green-800' },
-  CLOSED: { label: '모집 마감', className: 'bg-gray-100 text-gray-600' },
-  COMPLETED: { label: '완료', className: 'bg-blue-100 text-blue-800' },
+  RECRUITING: { label: '모집 중', className: 'bg-dark-cardSoft text-dark-text border border-dark-line' },
+  CLOSED: { label: '모집 마감', className: 'bg-dark-pill text-dark-muted border border-dark-line' },
+  COMPLETED: { label: '완료', className: 'bg-brand/10 text-brand-light border border-brand/30' },
 };
 
 const ActivityCard: React.FC<{ item: ActivityListItem }> = ({ item }) => {

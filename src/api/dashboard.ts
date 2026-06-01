@@ -23,32 +23,3 @@ export const getPopularPosts = async (period: 'day' | 'week' | 'month' = 'week',
   });
   return response.data;
 };
-
-export interface OnboardingStep {
-  title: string;
-  path: string;
-  completed: boolean;
-  locked: boolean;
-  description?: string;
-}
-
-export interface GuideCompletedResponse {
-  is_guide_completed: boolean;
-}
-
-// TODO: 백엔드 API 연동 완료 후 목업 데이터 제거
-
-export const getStartGuide = async (): Promise<OnboardingStep[]> => {
-  // TODO: 실 API 교체
-  // const response = await api.get<OnboardingStep[]>('/dashboard/guide');
-  // return response.data;
-  void api;
-  return [];
-};
-
-export const getGuideCompleted = async (): Promise<GuideCompletedResponse> => {
-  // TODO: 실 API 교체
-  // const response = await api.get<GuideCompletedResponse>('/dashboard/guide/completed');
-  // return response.data;
-  return { is_guide_completed: false };
-};

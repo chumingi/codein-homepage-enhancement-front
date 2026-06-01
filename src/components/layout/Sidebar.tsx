@@ -1,12 +1,12 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
-  LayoutDashboard,
-  MessageSquare,
-  Calendar as CalendarIcon,
-  Image as ImageIcon,
-  CalendarCheck,
-  User
+  LayoutDashboard, 
+  MessageSquare, 
+  Calendar as CalendarIcon, 
+  Image as ImageIcon, 
+  QrCode, 
+  User 
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -24,7 +24,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { name: 'Boards', href: '/boards', icon: MessageSquare },
     { name: 'Gallery', href: '/gallery', icon: ImageIcon },
     { name: 'Calendar', href: '/events', icon: CalendarIcon },
-    { name: 'Check-In', href: '/check-in', icon: CalendarCheck },
+    { name: '출석', href: '/check-in', icon: QrCode },
     { name: 'Profile', href: '/profile', icon: User },
   ];
 
