@@ -31,6 +31,9 @@ const PostWritePage: React.FC = () => {
 
   const [githubUrl, setGithubUrl] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
+  const [techStack, setTechStack] = useState('');
+  const [period, setPeriod] = useState('');
+  const [teamInfo, setTeamInfo] = useState('');
 
   const editPost = locationState.post;
   const isEditMode = !!editPost;
@@ -48,7 +51,6 @@ const PostWritePage: React.FC = () => {
     ? boards
     : boards.filter((board) => !board.name.includes('공지'));
 
-  /* 🌟 수정 포인트(4번, 5번): 현재 드롭다운에서 사용자가 '실시간 선택한' 게시판의 board_type을 추적 */
   const currentSelectedBoard = boards.find((board) => board.id === boardId);
   const selectedBoardType = currentSelectedBoard?.board_type;
 
@@ -101,7 +103,6 @@ const PostWritePage: React.FC = () => {
       setBoardId(editPost.board_id);
       setTitle(editPost.title);
       setContent(editPost.content);
-      /* 🌟 수정 포인트(6번): any 없이 정식 정의될 post 필드로 안전하게 세팅 */
       if (editPost.github_url) setGithubUrl(editPost.github_url);
       if (editPost.thumbnail_url) setThumbnailUrl(editPost.thumbnail_url);
 
@@ -142,13 +143,16 @@ const PostWritePage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      /* 🌟 수정 포인트(4, 6번): any 캐스팅을 지우고 정식 확장 타입을 선언하여 할당 */
       const payload: CreatePostPayload = {
         title,
         content,
         board_id: boardId,
         github_url: selectedBoardType === 'project' ? githubUrl : undefined,
         thumbnail_url: selectedBoardType === 'blog' ? thumbnailUrl : undefined,
+        // TODO: Swagger BoardCreate 실 연동 시 아래 필드 payload에 포함
+        // tech_stack: selectedBoardType === 'project' ? techStack.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+        // period: selectedBoardType === 'project' ? period : undefined,
+        // team_info: selectedBoardType === 'project' ? teamInfo : undefined,
         ...(showAnnouncementOptions ? {
           notice_type: noticeType,
           target_audience: targetAudience,
@@ -185,6 +189,9 @@ const PostWritePage: React.FC = () => {
     }
   };
 
+  const inputClass =
+    'w-full rounded-lg border border-dark-line bg-dark-cardSoft px-3 py-2 text-sm text-dark-text placeholder:text-dark-muted focus:outline-none focus:border-brand';
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-6 text-left">{isEditMode ? '글 수정' : '글쓰기'}</h1>
@@ -220,18 +227,36 @@ const PostWritePage: React.FC = () => {
           />
         </div>
 
-        {/* 🌟 수정 포인트(4번): URL의 query가 아닌 실시간으로 잡히는 selectedBoardType 기준으로 인풋 토글 */}
         {selectedBoardType === 'project' && (
-          <div className="mb-4 text-left">
-            <label className="block text-gray-700 text-sm font-bold mb-2">
-              🐙 GitHub 주소
-            </label>
+          <div className="mb-4 space-y-3 p-4 bg-dark-cardSoft rounded-xl border border-dark-line">
+            <h3 className="text-sm font-semibold text-dark-muted">프로젝트 정보 (선택)</h3>
+            <input
+              type="text"
+              value={techStack}
+              onChange={(e) => setTechStack(e.target.value)}
+              className={inputClass}
+              placeholder="기술 스택 (쉼표로 구분, 예: React, TypeScript, FastAPI)"
+            />
+            <input
+              type="text"
+              value={period}
+              onChange={(e) => setPeriod(e.target.value)}
+              className={inputClass}
+              placeholder="진행 기간 (예: 2026.03 ~ 2026.06)"
+            />
+            <input
+              type="text"
+              value={teamInfo}
+              onChange={(e) => setTeamInfo(e.target.value)}
+              className={inputClass}
+              placeholder="팀원 정보"
+            />
             <input
               type="url"
               value={githubUrl}
               onChange={(e) => setGithubUrl(e.target.value)}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              placeholder="https://github.com/username/repository"
+              className={inputClass}
+              placeholder="GitHub 저장소 주소 (https://github.com/...)"
             />
           </div>
         )}
