@@ -1,17 +1,57 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Settings, RefreshCw, ArrowRight, Calendar, MapPin } from 'lucide-react';
+import { Search, Settings, RefreshCw, ArrowRight, Calendar, MapPin, CheckCircle2, Lock } from 'lucide-react';
 import { getNotices } from '../api/board';
 import { getEventOccurrences } from '../api/events';
-import { getPopularPosts } from '../api/dashboard';
+import { getGuideCompleted, getPopularPosts, getStartGuide } from '../api/dashboard';
+import type { OnboardingStep } from '../api/dashboard';
 import { getTests } from '../api/codetest';
 import { galleryApi } from '../api/gallery';
 import { useAuth } from '../context/AuthContext';
+import { toast } from 'react-hot-toast';
 import type { Post } from '../types/board';
 import type { Event } from '../api/events';
 import type { PopularPost } from '../api/dashboard';
 import type { Album } from '../types/gallery';
 import type { Test } from '../types/codetest';
+
+const DEFAULT_STEPS: OnboardingStep[] = [
+  {
+    title: '회원가입',
+    path: '/register',
+    completed: false,
+    locked: false,
+    description: 'CodeIn 계정을 생성하고 동아리 멤버가 되어보세요.',
+  },
+  {
+    title: '프로필 작성',
+    path: '/profile',
+    completed: false,
+    locked: false,
+    description: '관심 분야와 기술 스택을 입력하여 나를 소개하세요.',
+  },
+  {
+    title: '코딩테스트 응시',
+    path: '/contest',
+    completed: false,
+    locked: false,
+    description: '레벨 테스트에 응시하여 나의 실력을 증명하세요.',
+  },
+  {
+    title: '랭크 배정',
+    path: '/profile',
+    completed: false,
+    locked: false,
+    description: '테스트 결과에 따라 초기 랭크를 부여받습니다.',
+  },
+  {
+    title: '추천 스터디 안내',
+    path: '/events',
+    completed: false,
+    locked: false,
+    description: '나의 관심사와 레벨에 맞는 스터디를 추천받고 참여하세요.',
+  },
+];
 
 const HomePage: React.FC = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -26,7 +66,36 @@ const HomePage: React.FC = () => {
   const [tests, setTests] = useState<Test[]>([]);
   const [popularPosts, setPopularPosts] = useState<PopularPost[]>([]);
   const [albums, setAlbums] = useState<Album[]>([]);
+  const [guideSteps, setGuideSteps] = useState<OnboardingStep[]>([]);
   const navigate = useNavigate();
+
+  const fetchGuide = useCallback(async () => {
+    try {
+      if (isAuthenticated) {
+        const completed = await getGuideCompleted();
+        if (completed.is_guide_completed) {
+          setGuideSteps([]);
+          return;
+        }
+      }
+
+      const data = await getStartGuide();
+      const mapped = data.map((step, idx) => ({
+        ...step,
+        description: step.description || DEFAULT_STEPS[idx]?.description || '',
+      }));
+      setGuideSteps(mapped);
+    } catch (error) {
+      console.error('Failed to fetch start guide', error);
+      const fallbackSteps = DEFAULT_STEPS.map((step) => ({
+        ...step,
+        completed: false,
+        locked: !isAuthenticated,
+      }));
+      setGuideSteps(fallbackSteps);
+    }
+  }, [isAuthenticated]);
+
 
   const fetchNotices = useCallback(async () => {
     try {
@@ -79,13 +148,33 @@ const HomePage: React.FC = () => {
 
   useEffect(() => {
     fetchNotices();
+    fetchGuide();
     if (isAuthenticated) {
       fetchEvents();
       fetchPopularPosts();
       fetchTests();
       fetchAlbums();
     }
-  }, [isAuthenticated, fetchNotices, fetchEvents, fetchPopularPosts, fetchTests, fetchAlbums]);
+
+    window.addEventListener('focus', fetchGuide);
+    return () => {
+      window.removeEventListener('focus', fetchGuide);
+    };
+  }, [isAuthenticated, fetchNotices, fetchGuide, fetchEvents, fetchPopularPosts, fetchTests, fetchAlbums]);
+
+  const handleStepClick = (e: React.MouseEvent, step: OnboardingStep) => {
+    if (!isAuthenticated) {
+      e.preventDefault();
+      toast.error('로그인 후 이용해주세요.');
+      return;
+    }
+    if (step.locked) {
+      e.preventDefault();
+      toast.error('이전 단계를 먼저 완료해주세요');
+      return;
+    }
+    navigate(step.path);
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -259,6 +348,128 @@ const HomePage: React.FC = () => {
       </section>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12 pb-12">
+        {!(guideSteps.length > 0 && guideSteps.every(step => step.completed)) && guideSteps.length > 0 && (
+          <section className="animate-in fade-in slide-in-from-top-4 duration-300">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-dark-text mb-2">CodeIn 시작 가이드</h2>
+              <p className="text-dark-muted">신규 회원을 위한 단계별 안내입니다.</p>
+            </div>
+            <div className="grid grid-cols-1 gap-4">
+              {guideSteps.map((step, index) => {
+                const stepNumber = index + 1;
+                const isStepCompleted = step.completed;
+                const isStepLocked = step.locked;
+                const isStepIncomplete = !isStepCompleted && !isStepLocked;
+
+                // 서버에서 계산한 완료/잠김 상태를 그대로 화면 상태로 변환한다.
+                let cardStyle = '';
+                let titleElement = null;
+                let iconElement = null;
+
+                if (isStepCompleted) {
+                  cardStyle = 'bg-dark-card/40 border-dark-line/40 opacity-55 select-none scale-[0.99]';
+                  iconElement = <CheckCircle2 className="w-6 h-6 text-emerald-500 shrink-0" />;
+                  titleElement = (
+                    <span className="text-lg font-bold text-dark-muted line-through decoration-dark-muted/40">
+                      {step.title}
+                    </span>
+                  );
+                } else if (isStepLocked) {
+                  cardStyle = 'bg-dark-cardSoft/35 border-dark-line/30 opacity-70 select-none';
+                  iconElement = <Lock className="w-6 h-6 text-dark-muted shrink-0" />;
+                  titleElement = (
+                    <span className="text-lg font-bold text-dark-muted">
+                      {step.title}
+                    </span>
+                  );
+                } else {
+                  cardStyle = 'bg-dark-card border-dark-line shadow-lg hover:border-brand/40 hover:shadow-brand/5 hover:-translate-y-0.5';
+                  iconElement = (
+                    <div className="w-7 h-7 rounded-full bg-brand text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-md">
+                      {stepNumber}
+                    </div>
+                  );
+                  
+                  if (isAuthenticated || step.path === '/register') {
+                    titleElement = (
+                      <button
+                        onClick={(e) => handleStepClick(e, step)}
+                        className="text-lg font-bold text-brand hover:text-brand-light underline decoration-brand/30 hover:decoration-brand-light transition-all text-left focus:outline-none cursor-pointer"
+                      >
+                        {step.title}
+                      </button>
+                    );
+                  } else {
+                    titleElement = (
+                      <span className="text-lg font-bold text-dark-text">
+                        {step.title}
+                      </span>
+                    );
+                  }
+                }
+
+                return (
+                  <div
+                    key={index}
+                    onClick={(e) => {
+                      if (isStepLocked) {
+                        handleStepClick(e, step);
+                      }
+                    }}
+                    className={`relative flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border transition-all duration-300 ${cardStyle} ${isStepLocked ? 'cursor-pointer' : ''}`}
+                  >
+                    <div className="flex gap-4 items-start sm:items-center">
+                      <div className="flex items-center justify-center h-8 shrink-0 mt-0.5 sm:mt-0">
+                        {iconElement}
+                      </div>
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold uppercase tracking-wider text-brand">
+                            Step 0{stepNumber}
+                          </span>
+                          {isStepCompleted && (
+                            <span className="bg-emerald-500/10 text-emerald-500 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-500/20">
+                              완료됨
+                            </span>
+                          )}
+                          {isStepLocked && (
+                            <span className="bg-dark-cardSoft text-dark-muted text-[10px] font-bold px-2 py-0.5 rounded-full border border-dark-line">
+                              잠김
+                            </span>
+                          )}
+                          {isStepIncomplete && (
+                            <span className="bg-brand/10 text-brand-light text-[10px] font-bold px-2 py-0.5 rounded-full border border-brand/20 animate-pulse">
+                              미완료
+                            </span>
+                          )}
+                        </div>
+                        {titleElement}
+                        <p className="text-dark-muted text-sm leading-relaxed max-w-[65ch]">
+                          {isStepLocked ? '이전 단계를 먼저 완료해주세요.' : step.description}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {isStepCompleted && (
+                      <div className="text-xs text-emerald-500 bg-emerald-500/5 border border-emerald-500/10 px-3 py-1.5 rounded-lg self-start sm:self-center">
+                        ✓ 완료됨
+                      </div>
+                    )}
+                    {isStepIncomplete && (isAuthenticated || step.path === '/register') && (
+                      <button
+                        onClick={(e) => handleStepClick(e, step)}
+                        className="text-xs font-bold text-white bg-brand hover:bg-brand-light px-3.5 py-2 rounded-xl transition-colors cursor-pointer shrink-0 self-start sm:self-center shadow-sm"
+                      >
+                        바로가기 →
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
         <section>
           <div className="bg-gradient-to-b from-dark-cardSoft to-dark-cardSoft/70 border border-dark-line rounded-3xl p-6 shadow-lg">
           <form onSubmit={handleSearch} className="flex gap-2 mb-4">
@@ -579,72 +790,6 @@ const HomePage: React.FC = () => {
             <p className="text-sm text-dark-muted break-words leading-6">
               동아리원들과 함께하는 즐거운 추억 만들기. 끈끈한 네트워크 형성.
             </p>
-          </div>
-        </div>
-      </section>
-
-      <section>
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-dark-text mb-2">CodeIn 시작 가이드</h2>
-          <p className="text-dark-muted">신규 회원을 위한 단계별 안내입니다.</p>
-        </div>
-        <div className="bg-dark-card border border-dark-line rounded-2xl p-6">
-          <div className="space-y-6 relative before:absolute before:left-[19px] before:top-2 before:bottom-2 before:w-0.5 before:bg-dark-line">
-            <div className="relative flex gap-4 items-start group">
-              <div className="w-10 h-10 rounded-full bg-brand text-white flex items-center justify-center font-bold relative z-10 shrink-0 group-hover:scale-110 transition-transform">
-                1
-              </div>
-              <div className="pt-1">
-                <h3 className="text-lg font-bold text-dark-text mb-1 group-hover:text-brand-light transition-colors">회원가입</h3>
-                <p className="text-dark-muted text-sm">
-                  CodeIn 계정을 생성하고 동아리 멤버가 되어보세요.
-                </p>
-              </div>
-            </div>
-            <div className="relative flex gap-4 items-start group">
-              <div className="w-10 h-10 rounded-full bg-dark-card border border-dark-line text-dark-muted flex items-center justify-center font-bold relative z-10 shrink-0 group-hover:border-brand group-hover:text-brand-light transition-colors">
-                2
-              </div>
-              <div className="pt-1">
-                <h3 className="text-lg font-bold text-dark-text mb-1 group-hover:text-brand-light transition-colors">프로필 작성</h3>
-                <p className="text-dark-muted text-sm">
-                  관심 분야와 기술 스택을 입력하여 나를 소개하세요.
-                </p>
-              </div>
-            </div>
-            <div className="relative flex gap-4 items-start group">
-              <div className="w-10 h-10 rounded-full bg-dark-card border border-dark-line text-dark-muted flex items-center justify-center font-bold relative z-10 shrink-0 group-hover:border-brand group-hover:text-brand-light transition-colors">
-                3
-              </div>
-              <div className="pt-1">
-                <h3 className="text-lg font-bold text-dark-text mb-1 group-hover:text-brand-light transition-colors">코딩테스트 응시</h3>
-                <p className="text-dark-muted text-sm">
-                  레벨 테스트에 응시하여 나의 실력을 증명하세요.
-                </p>
-              </div>
-            </div>
-            <div className="relative flex gap-4 items-start group">
-              <div className="w-10 h-10 rounded-full bg-dark-card border border-dark-line text-dark-muted flex items-center justify-center font-bold relative z-10 shrink-0 group-hover:border-brand group-hover:text-brand-light transition-colors">
-                4
-              </div>
-              <div className="pt-1">
-                <h3 className="text-lg font-bold text-dark-text mb-1 group-hover:text-brand-light transition-colors">랭크 배정</h3>
-                <p className="text-dark-muted text-sm">
-                  테스트 결과에 따라 초기 랭크를 부여받습니다.
-                </p>
-              </div>
-            </div>
-            <div className="relative flex gap-4 items-start group">
-              <div className="w-10 h-10 rounded-full bg-dark-card border border-dark-line text-dark-muted flex items-center justify-center font-bold relative z-10 shrink-0 group-hover:border-brand group-hover:text-brand-light transition-colors">
-                5
-              </div>
-              <div className="pt-1">
-                <h3 className="text-lg font-bold text-dark-text mb-1 group-hover:text-brand-light transition-colors">추천 스터디 안내</h3>
-                <p className="text-dark-muted text-sm">
-                  나의 관심사와 레벨에 맞는 스터디를 추천받고 참여하세요.
-                </p>
-              </div>
-            </div>
           </div>
         </div>
       </section>
