@@ -24,6 +24,7 @@ export interface Post {
   title: string;
   content: string;
   github_url?: string;
+  thumbnail_url?: string;
   board_id: number;
   author_id: number;
   template_id?: number | null;
@@ -54,6 +55,7 @@ export interface CreatePostPayload {
   template_id?: number;
   board_id?: number;
   github_url?: string;
+  thumbnail_url?: string;
   notice_type?: string;
   target_audience?: string;
   target_ranks?: string[];

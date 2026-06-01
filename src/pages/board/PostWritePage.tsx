@@ -15,17 +15,24 @@ const PostWritePage: React.FC = () => {
   const searchParams = new URLSearchParams(location.search);
   const initialTitle = searchParams.get('title') || '';
   const initialContent = searchParams.get('content') || '';
+  
+  // URL에서 넘어온 카테고리 기본값 (초기 매핑 보조용)
+  const currentCategory = searchParams.get('category') || 'free';
+
+  const locationState = location.state || {};
 
   const [boards, setBoards] = useState<Board[]>([]);
   const [templates, setTemplates] = useState<NoticeTemplate[]>([]);
-  const [boardId, setBoardId] = useState<number>(location.state?.boardId || 0);
+  const [boardId, setBoardId] = useState<number>(locationState.boardId || 0);
   const [title, setTitle] = useState(initialTitle);
   const [content, setContent] = useState(initialContent);
-  const [githubUrl, setGithubUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
 
-  const editPost = location.state?.post;
+  const [githubUrl, setGithubUrl] = useState('');
+  const [thumbnailUrl, setThumbnailUrl] = useState('');
+
+  const editPost = locationState.post;
   const isEditMode = !!editPost;
 
   const [showAnnouncementOptions, setShowAnnouncementOptions] = useState(false);
@@ -41,6 +48,10 @@ const PostWritePage: React.FC = () => {
     ? boards
     : boards.filter((board) => !board.name.includes('공지'));
 
+  /* 🌟 수정 포인트(4번, 5번): 현재 드롭다운에서 사용자가 '실시간 선택한' 게시판의 board_type을 추적 */
+  const currentSelectedBoard = boards.find((board) => board.id === boardId);
+  const selectedBoardType = currentSelectedBoard?.board_type;
+
   useEffect(() => {
     const fetchBoards = async () => {
       try {
@@ -49,8 +60,20 @@ const PostWritePage: React.FC = () => {
         const filteredBoards = isStaffOrAdmin
           ? data
           : data.filter((board) => !board.name.includes('공지'));
+        
         if (filteredBoards.length > 0) {
-          if (!boardId || !filteredBoards.some((board) => board.id === boardId)) {
+          // 수정 모드가 아니고, 기존 전달된 boardId가 없을 때 카테고리 기반 자동 초기값 설정 (5번 보완)
+          if (!isEditMode && !locationState.boardId) {
+            let matchedInitialBoard = filteredBoards[0];
+            if (currentCategory === 'project') {
+              matchedInitialBoard = filteredBoards.find(b => b.board_type === 'project') || filteredBoards[0];
+            } else if (currentCategory === 'blog') {
+              matchedInitialBoard = filteredBoards.find(b => b.board_type === 'blog') || filteredBoards[0];
+            } else if (currentCategory === 'free') {
+              matchedInitialBoard = filteredBoards.find(b => b.board_type === 'general') || filteredBoards[0];
+            }
+            setBoardId(matchedInitialBoard.id);
+          } else if (!boardId || !filteredBoards.some((board) => board.id === boardId)) {
             setBoardId(filteredBoards[0].id);
           }
         }
@@ -71,14 +94,17 @@ const PostWritePage: React.FC = () => {
       };
       fetchTemplates();
     }
-  }, [boardId, isStaffOrAdmin]);
+  }, [isStaffOrAdmin]); // 무한 루프 방지를 위해 의존성 배열에서 boardId 제외 및 최적화
 
   useEffect(() => {
     if (isEditMode && editPost) {
       setBoardId(editPost.board_id);
       setTitle(editPost.title);
       setContent(editPost.content);
-      setGithubUrl(editPost.github_url || ''); //백엔드 필드명 github_url로 하기
+      /* 🌟 수정 포인트(6번): any 없이 정식 정의될 post 필드로 안전하게 세팅 */
+      if (editPost.github_url) setGithubUrl(editPost.github_url);
+      if (editPost.thumbnail_url) setThumbnailUrl(editPost.thumbnail_url);
+
       if (editPost.notice_type) {
         setShowAnnouncementOptions(true);
         setNoticeType(editPost.notice_type);
@@ -116,11 +142,13 @@ const PostWritePage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
+      /* 🌟 수정 포인트(4, 6번): any 캐스팅을 지우고 정식 확장 타입을 선언하여 할당 */
       const payload: CreatePostPayload = {
         title,
         content,
         board_id: boardId,
-        github_url: githubUrl,
+        github_url: selectedBoardType === 'project' ? githubUrl : undefined,
+        thumbnail_url: selectedBoardType === 'blog' ? thumbnailUrl : undefined,
         ...(showAnnouncementOptions ? {
           notice_type: noticeType,
           target_audience: targetAudience,
@@ -159,10 +187,10 @@ const PostWritePage: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">{isEditMode ? '글 수정' : '글쓰기'}</h1>
+      <h1 className="text-2xl font-bold mb-6 text-left">{isEditMode ? '글 수정' : '글쓰기'}</h1>
 
       <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-        <div className="mb-4">
+        <div className="mb-4 text-left">
           <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="board">
             게시판
           </label>
@@ -170,7 +198,7 @@ const PostWritePage: React.FC = () => {
             id="board"
             value={boardId}
             onChange={(e) => setBoardId(Number(e.target.value))}
-            className="shadow border border-dark-line rounded w-full py-2 px-3 bg-dark-bg text-dark-text leading-tight focus:outline-none focus:shadow-outline"
+            className="shadow border border-gray-300 rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
           >
             {availableBoards.map((board) => (
               <option key={board.id} value={board.id}>{board.name}</option>
@@ -178,7 +206,7 @@ const PostWritePage: React.FC = () => {
           </select>
         </div>
 
-        <div className="mb-4">
+        <div className="mb-4 text-left">
           <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="title">
             제목
           </label>
@@ -192,28 +220,45 @@ const PostWritePage: React.FC = () => {
           />
         </div>
 
-        <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="githubUrl">
-            GitHub 주소
-          </label>
-          <input
-            id="githubUrl"
-            type="url"
-            value={githubUrl}
-            onChange={(e) => setGithubUrl(e.target.value)}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            placeholder="https://github.com/your-repository"
-          />
-        </div>
+        {/* 🌟 수정 포인트(4번): URL의 query가 아닌 실시간으로 잡히는 selectedBoardType 기준으로 인풋 토글 */}
+        {selectedBoardType === 'project' && (
+          <div className="mb-4 text-left">
+            <label className="block text-gray-700 text-sm font-bold mb-2">
+              🐙 GitHub 주소
+            </label>
+            <input
+              type="url"
+              value={githubUrl}
+              onChange={(e) => setGithubUrl(e.target.value)}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              placeholder="https://github.com/username/repository"
+            />
+          </div>
+        )}
 
-        <div className="mb-6">
+        {selectedBoardType === 'blog' && (
+          <div className="mb-4 text-left">
+            <label className="block text-gray-700 text-sm font-bold mb-2">
+              🖼️ 블로그 썸네일 이미지 주소
+            </label>
+            <input
+              type="url"
+              value={thumbnailUrl}
+              onChange={(e) => setThumbnailUrl(e.target.value)}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              placeholder="https://example.com/image.png"
+            />
+          </div>
+        )}
+
+        <div className="mb-6 text-left">
           <div className="flex justify-between items-center mb-2">
             <label className="block text-gray-700 text-sm font-bold" htmlFor="content">
               내용
             </label>
             {isStaffOrAdmin && templates.length > 0 && (
               <select
-                className="text-sm border border-dark-line rounded px-2 py-1 bg-dark-bg text-dark-text"
+                className="text-sm border border-gray-300 rounded px-2 py-1 text-gray-700"
                 onChange={(e) => handleTemplateSelect(Number(e.target.value))}
                 defaultValue=""
               >
@@ -233,7 +278,7 @@ const PostWritePage: React.FC = () => {
           />
         </div>
 
-        <div className="mb-6">
+        <div className="mb-6 text-left">
           <label className="block text-gray-700 text-sm font-bold mb-2">첨부파일</label>
           <input
             type="file"
@@ -251,7 +296,7 @@ const PostWritePage: React.FC = () => {
         </div>
 
         {isStaffOrAdmin && (
-          <div className="mb-6 border rounded p-4">
+          <div className="mb-6 border rounded p-4 text-left">
             <button
               type="button"
               onClick={() => setShowAnnouncementOptions(!showAnnouncementOptions)}
@@ -268,7 +313,7 @@ const PostWritePage: React.FC = () => {
                   <select
                     value={noticeType}
                     onChange={(e) => setNoticeType(e.target.value)}
-                    className="shadow border border-dark-line rounded w-full py-2 px-3 bg-dark-bg text-dark-text"
+                    className="shadow border border-gray-300 rounded w-full py-2 px-3 text-gray-700"
                   >
                     <option value="normal">일반 공지</option>
                     <option value="important">중요 공지</option>
@@ -284,7 +329,7 @@ const PostWritePage: React.FC = () => {
                   <select
                     value={targetAudience}
                     onChange={(e) => setTargetAudience(e.target.value)}
-                    className="shadow border border-dark-line rounded w-full py-2 px-3 bg-dark-bg text-dark-text"
+                    className="shadow border border-gray-300 rounded w-full py-2 px-3 text-gray-700"
                   >
                     <option value="all">전체</option>
                     <option value="members">회원만</option>
