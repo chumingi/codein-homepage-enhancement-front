@@ -145,7 +145,7 @@ const ActivityDetailPage: React.FC = () => {
             {TYPE_LABELS[activity.recruitment_type]}
           </span>
           {!isRecruiting && (
-            <span className="text-xs font-medium px-2.5 py-0.5 rounded bg-gray-100 text-gray-600">
+            <span className="text-xs font-medium px-2.5 py-0.5 rounded bg-dark-cardSoft text-dark-muted border border-dark-line">
               {activity.recruitment_status === 'CLOSED' ? '모집 마감' : '완료'}
             </span>
           )}

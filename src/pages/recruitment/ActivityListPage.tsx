@@ -22,9 +22,9 @@ const TYPE_COLOR: Record<RecruitmentType, string> = {
 };
 
 const STATUS_LABELS: Record<RecruitmentStatus, { label: string; className: string }> = {
-  RECRUITING: { label: '모집 중', className: 'bg-green-100 text-green-800' },
-  CLOSED: { label: '모집 마감', className: 'bg-gray-100 text-gray-600' },
-  COMPLETED: { label: '완료', className: 'bg-blue-100 text-blue-800' },
+  RECRUITING: { label: '모집 중', className: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' },
+  CLOSED: { label: '모집 마감', className: 'bg-dark-cardSoft text-dark-muted border border-dark-line' },
+  COMPLETED: { label: '완료', className: 'bg-brand/10 text-brand border border-brand/30' },
 };
 
 const ActivityCard: React.FC<{ item: ActivityListItem }> = ({ item }) => {
@@ -163,7 +163,7 @@ const ActivityListPage: React.FC = () => {
               type="button"
               onClick={() => setTypeFilter('')}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                typeFilter === '' ? 'bg-white text-dark-bg' : 'text-dark-muted hover:text-white hover:bg-dark-cardSoft border border-dark-line'
+                typeFilter === '' ? 'bg-dark-text text-dark-bg' : 'text-dark-muted hover:text-white hover:bg-dark-cardSoft border border-dark-line'
               }`}
             >
               전체 유형
@@ -174,7 +174,7 @@ const ActivityListPage: React.FC = () => {
                 type="button"
                 onClick={() => setTypeFilter(t)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  typeFilter === t ? 'bg-white text-dark-bg' : 'text-dark-muted hover:text-white hover:bg-dark-cardSoft border border-dark-line'
+                  typeFilter === t ? 'bg-dark-text text-dark-bg' : 'text-dark-muted hover:text-white hover:bg-dark-cardSoft border border-dark-line'
                 }`}
               >
                 {TYPE_LABELS[t]}
@@ -190,7 +190,7 @@ const ActivityListPage: React.FC = () => {
                 type="button"
                 onClick={() => setStatusFilter(s as RecruitmentStatus | '')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  statusFilter === s ? 'bg-white text-dark-bg' : 'text-dark-muted hover:text-white hover:bg-dark-cardSoft border border-dark-line'
+                  statusFilter === s ? 'bg-dark-text text-dark-bg' : 'text-dark-muted hover:text-white hover:bg-dark-cardSoft border border-dark-line'
                 }`}
               >
                 {s === 'RECRUITING' ? '모집 중' : s === '' ? '전체' : '마감'}
