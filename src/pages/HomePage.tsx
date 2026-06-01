@@ -163,7 +163,7 @@ const HomePage: React.FC = () => {
   }, [isAuthenticated, fetchNotices, fetchGuide, fetchEvents, fetchPopularPosts, fetchTests, fetchAlbums]);
 
   const handleStepClick = (e: React.MouseEvent, step: OnboardingStep) => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated && step.path !== '/register') {
       e.preventDefault();
       toast.error('로그인 후 이용해주세요.');
       return;
@@ -367,7 +367,7 @@ const HomePage: React.FC = () => {
                 let iconElement = null;
 
                 if (isStepCompleted) {
-                  cardStyle = 'bg-dark-card/40 border-dark-line/40 opacity-55 select-none scale-[0.99]';
+                  cardStyle = 'bg-dark-card/40 border-dark-line/40 opacity-55 select-none scale-[0.99] cursor-default';
                   iconElement = <CheckCircle2 className="w-6 h-6 text-emerald-500 shrink-0" />;
                   titleElement = (
                     <span className="text-lg font-bold text-dark-muted line-through decoration-dark-muted/40">
@@ -375,7 +375,7 @@ const HomePage: React.FC = () => {
                     </span>
                   );
                 } else if (isStepLocked) {
-                  cardStyle = 'bg-dark-cardSoft/35 border-dark-line/30 opacity-70 select-none';
+                  cardStyle = 'bg-dark-cardSoft/35 border-dark-line/30 opacity-70 select-none cursor-default';
                   iconElement = <Lock className="w-6 h-6 text-dark-muted shrink-0" />;
                   titleElement = (
                     <span className="text-lg font-bold text-dark-muted">
@@ -383,29 +383,20 @@ const HomePage: React.FC = () => {
                     </span>
                   );
                 } else {
-                  cardStyle = 'bg-dark-card border-dark-line shadow-lg hover:border-brand/40 hover:shadow-brand/5 hover:-translate-y-0.5';
+                  cardStyle = 'bg-dark-card border-dark-line shadow-lg hover:border-brand/40 hover:shadow-brand/5 hover:-translate-y-0.5 cursor-pointer';
                   iconElement = (
                     <div className="w-7 h-7 rounded-full bg-brand text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-md">
                       {stepNumber}
                     </div>
                   );
-                  
-                  if (isAuthenticated || step.path === '/register') {
-                    titleElement = (
-                      <button
-                        onClick={(e) => handleStepClick(e, step)}
-                        className="text-lg font-bold text-brand hover:text-brand-light underline decoration-brand/30 hover:decoration-brand-light transition-all text-left focus:outline-none cursor-pointer"
-                      >
-                        {step.title}
-                      </button>
-                    );
-                  } else {
-                    titleElement = (
-                      <span className="text-lg font-bold text-dark-text">
-                        {step.title}
-                      </span>
-                    );
-                  }
+                  titleElement = (
+                    <button
+                      onClick={(e) => handleStepClick(e, step)}
+                      className="text-lg font-bold text-brand hover:text-brand-light underline decoration-brand/30 hover:decoration-brand-light transition-all text-left focus:outline-none cursor-pointer"
+                    >
+                      {step.title}
+                    </button>
+                  );
                 }
 
                 return (
@@ -416,7 +407,7 @@ const HomePage: React.FC = () => {
                         handleStepClick(e, step);
                       }
                     }}
-                    className={`relative flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border transition-all duration-300 ${cardStyle} ${isStepLocked ? 'cursor-pointer' : ''}`}
+                    className={`relative flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border transition-all duration-300 ${cardStyle}`}
                   >
                     <div className="flex gap-4 items-start sm:items-center">
                       <div className="flex items-center justify-center h-8 shrink-0 mt-0.5 sm:mt-0">

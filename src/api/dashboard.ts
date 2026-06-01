@@ -48,7 +48,13 @@ export const getStartGuide = async (): Promise<OnboardingStep[]> => {
   // 연동 시: const res = await api.get<GuideDashboard>('/guide/status'); return res.data.steps;
   // GuideDashboard 타입도 함께 정의 필요: { is_all_completed: boolean; steps: GuideStepItem[] }
   void api;
-  return [];
+  return [
+    { title: '회원가입', path: '/register', completed: true, locked: false, description: 'CodeIn 계정을 생성하고 동아리 멤버가 되어보세요.' },
+    { title: '프로필 작성', path: '/profile', completed: false, locked: false, description: '관심 분야와 기술 스택을 입력하여 나를 소개하세요.' },
+    { title: '코딩테스트 응시', path: '/contest', completed: false, locked: true, description: '레벨 테스트에 응시하여 나의 실력을 증명하세요.' },
+    { title: '랭크 배정', path: '/profile', completed: false, locked: true, description: '테스트 결과에 따라 초기 랭크를 부여받습니다.' },
+    { title: '추천 스터디 안내', path: '/events', completed: false, locked: true, description: '나의 관심사와 레벨에 맞는 스터디를 추천받고 참여하세요.' },
+  ];
 };
 
 export const getGuideCompleted = async (): Promise<GuideCompletedResponse> => {
