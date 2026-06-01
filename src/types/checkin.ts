@@ -1,50 +1,44 @@
-// GET /attendance/me/status
-export interface AttendanceStatus {
-  has_attended_today: boolean;
-  current_stamp_cycle: number;
-  current_stamp_count: number;
-  max_stamp_pieces: number;
+export interface StampInfo {
+	board_size: number;
+	current_cycle: number;
+	progress: number;
+	daily_points?: number;
+	reward_points?: number;
 }
 
-// POST /attendance/me/check (200 OK)
-export interface AttendanceCheckResult {
-  success: boolean;
-  attended_at: string;
-  earned_points: number;
-  current_stamp_count: number;
-  is_board_completed: boolean;
-  message: string;
+export interface TodayCheckInStatus {
+	date: string;
+	checked_in: boolean;
+	checked_in_at: string | null;
+	points_earned: number | null;
+	stamp: StampInfo;
 }
 
-// GET /attendance/me/history 응답 아이템 (출석한 날만 포함, 미출석 날은 배열에 없음)
-export interface AttendanceHistoryItem {
-  date: string;            // "YYYY-MM-DD"
-  attended_at: string;
-  earned_points: number;
+export type CheckInResultStatus = 'success' | 'already_checked_in' | 'error';
+
+export interface CheckInResult {
+	status: CheckInResultStatus;
+	message?: string;
+	checked_in_at: string | null;
+	points_earned: number | null;
+	stamp: StampInfo;
 }
 
-// GET /attendance/admin/status
-export interface AdminAttendanceDashboard {
-  summary: {
-    total_members: number;
-    attended_count: number;
-    absent_count: number;
-    attendance_rate: number;
-  };
-  member_list: AdminMemberAttendance[];
+export interface AdminDailyCheckInRecord {
+	user_id: number;
+	user_name: string;
+	student_id: string;
+	status: 'present' | null;
+	checked_in_at: string | null;
 }
 
-export interface AdminMemberAttendance {
-  user_id: number;
-  nickname: string;
-  status: "ATTENDED" | "ABSENT";
-  attended_at: string | null;
-}
-
-// GET/PATCH /attendance/admin/policy
-export interface AttendancePolicy {
-  stamp_board_size: number;
-  daily_points: number;
-  reward_points: number;
-  updated_at: string;
+export interface AdminDailyStats {
+	date: string;
+	stats: {
+		total_members: number;
+		attended: number;
+		absent: number;
+		attendance_rate: number;
+	};
+	records: AdminDailyCheckInRecord[];
 }

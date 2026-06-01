@@ -2,12 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getBoards, getBoardPosts } from '../../api/board';
 import type { Board, Post } from '../../types/board';
-import { useAuth } from '../../context/AuthContext'; 
+import { useAuth } from '../../context/AuthContext';
 import { Megaphone, MessageSquare, ChevronRight, Home, PencilLine, Eye } from 'lucide-react';
-import { BoardTabs } from '../../components/BoardTabs';
-import type { TabType } from '../../components/BoardTabs';
-/* 🌟 수정 포인트(7번): 프로젝트 규칙에 맞춘 date-fns 라이브러리 import */
-import { format, parseISO } from 'date-fns';
 
 const getPreferredBoardId = (availableBoards: Board[], search: string) => {
   if (availableBoards.length === 0) return null;
@@ -40,26 +36,24 @@ const getPreferredBoardId = (availableBoards: Board[], search: string) => {
 const BoardListPage: React.FC = () => {
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [boards, setBoards] = useState<Board[]>([]);
   const [selectedBoardId, setSelectedBoardId] = useState<number | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentTab, setCurrentTab] = useState<TabType>('free');
 
   const selectedBoard = boards.find((board) => board.id === selectedBoardId);
   const isNoticeBoard = selectedBoard?.board_type === 'notice';
+  const unreadNoticeCount = user && isNoticeBoard
+    ? posts.filter((post) => post.notice_type && !post.is_read).length
+    : 0;
 
   useEffect(() => {
     const fetchBoards = async () => {
       try {
         const data = await getBoards();
-        const visibleBoards = data.filter(
-          (board) =>
-            board.board_type === 'general' ||
-            board.board_type === 'notice' ||
-            board.board_type === 'qna' ||
-            board.board_type === 'project' ||
-            board.board_type === 'blog'
+        const visibleBoards = data.filter((board) => 
+          board.board_type === 'general' || board.board_type === 'notice' || board.board_type === 'qna'
         );
         setBoards(visibleBoards);
 
@@ -76,25 +70,7 @@ const BoardListPage: React.FC = () => {
       }
     };
     fetchBoards();
-  }, [location.search, location.state]);
-
-  useEffect(() => {
-    let targetId = selectedBoardId;
-    if (currentTab === 'free') {
-      const generalBoard = boards.find(b => b.board_type === 'general');
-      if (generalBoard) targetId = generalBoard.id;
-    } else if (currentTab === 'project') {
-      const projectBoard = boards.find(b => b.board_type === 'project');
-      if (projectBoard) targetId = projectBoard.id;
-    } else if (currentTab === 'blog') {
-      const blogBoard = boards.find(b => b.board_type === 'blog');
-      if (blogBoard) targetId = blogBoard.id;
-    }
-
-    if (targetId && targetId !== selectedBoardId) {
-      setSelectedBoardId(targetId);
-    }
-  }, [currentTab, boards]);
+  }, [location.search, location.state, user]);
 
   useEffect(() => {
     if (selectedBoardId) {
@@ -117,6 +93,7 @@ const BoardListPage: React.FC = () => {
 
   const getNoticeBadge = (type?: string | null, isBlinded?: boolean) => {
     const badges = [];
+    
     if (isBlinded && user?.role === 'superadmin') {
       badges.push(
         <span key="blinded" className="bg-gray-500 text-white text-xs font-medium mr-2 px-2.5 py-0.5 rounded">
@@ -124,6 +101,7 @@ const BoardListPage: React.FC = () => {
         </span>
       );
     }
+
     switch (type) {
       case 'urgent':
         badges.push(<span key="urgent" className="bg-red-100 text-red-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded">긴급</span>);
@@ -137,79 +115,65 @@ const BoardListPage: React.FC = () => {
       default:
         break;
     }
+    
     return badges.length > 0 ? <>{badges}</> : null;
   };
 
-  /* 🌟 수정 포인트(7번): date-fns를 활용하여 프로젝트 규칙에 맞게 날짜 포맷 구현 */
   const formatPostDate = (value: string) => {
-    return format(parseISO(value), 'yyyy.MM.dd');
+    const date = new Date(value);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}.${month}.${day}`;
   };
+
+
+  const noticeBoards = boards.filter((board) => board.board_type === 'notice');
+  const generalBoards = boards.filter((board) => board.board_type !== 'notice');
+  const showNoticeSection = !selectedBoardId || isNoticeBoard;
+  const showGeneralSection = !selectedBoardId || !isNoticeBoard;
 
   const sortedPosts = [...posts].sort((a, c) => {
     const pinDiff = Number(c.is_pinned) - Number(a.is_pinned);
     if (pinDiff !== 0) return pinDiff;
-    return new Date(c.created_at).getTime() - new Date(a.created_at).getTime();
+    const aTime = new Date(a.created_at).getTime();
+    const cTime = new Date(c.created_at).getTime();
+    return cTime - aTime;
   });
-
-  const [localLikes, setLocalLikes] = useState<Record<number, { count: number; liked: boolean }>>(() => {
-    const saved = localStorage.getItem('codein_board_likes');
-    return saved ? JSON.parse(saved) : {};
-  });
-
-  const handleLikeClick = (e: React.MouseEvent, postId: number, currentLikes: number) => {
-    e.preventDefault(); 
-    e.stopPropagation(); 
-
-    setLocalLikes((prev) => {
-      const currentData = prev[postId] || { count: currentLikes, liked: false };
-      const nextLiked = !currentData.liked;
-      const nextCount = nextLiked ? currentData.count + 1 : Math.max(0, currentData.count - 1);
-
-      const updated = {
-        ...prev,
-        [postId]: { count: nextCount, liked: nextLiked },
-      };
-      
-      localStorage.setItem('codein_board_likes', JSON.stringify(updated));
-      return updated;
-    });
-  };
 
   return (
-    <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 text-left">
+    <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
       {/* Breadcrumbs */}
-      <nav className="flex items-center text-sm text-gray-400 mb-6 space-x-2">
+      <nav className="flex items-center text-sm text-gray-500 mb-6 space-x-2">
         <Home className="w-4 h-4" />
-        <Link to="/" className="hover:text-blue-500">홈</Link>
+        <Link to="/" className="hover:text-blue-600">홈</Link>
         <ChevronRight className="w-4 h-4" />
-        <span className="text-gray-400">게시판</span>
+        <span className="font-medium text-gray-700">게시판</span>
         {selectedBoard && (
           <>
             <ChevronRight className="w-4 h-4" />
-            <span className="font-semibold text-blue-500">{selectedBoard.name}</span>
+            <span className="font-semibold text-blue-600">{selectedBoard.name}</span>
           </>
         )}
       </nav>
 
-      {/* 상단 타이틀 구역 */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-600 text-white rounded-xl shadow-md">
+        <div className="flex items-start sm:items-center gap-3">
+          <div className={`p-2 rounded-lg ${isNoticeBoard ? 'bg-indigo-100 text-indigo-600' : 'bg-blue-100 text-blue-600'}`}>
             {isNoticeBoard ? <Megaphone className="w-6 h-6" /> : <MessageSquare className="w-6 h-6" />}
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-white">
-              {currentTab === 'free' ? '자유게시판' : currentTab === 'project' ? '프로젝트 게시판' : '기술 블로그'}
+            <h1 className="text-2xl font-bold text-dark-text">
+              {isNoticeBoard ? '공지사항' : selectedBoard?.name || '커뮤니티'}
             </h1>
-            <p className="text-sm text-gray-400 mt-1">
-              {currentTab === 'blog' ? '개발 지식과 포스트를 공유하는 공간입니다.' : '자유로운 소통과 정보를 공유하는 공간입니다.'}
+            <p className="text-sm text-gray-500 mt-1">
+              {isNoticeBoard ? '중요한 소식과 안내를 확인하세요.' : '자유로운 소통과 정보를 공유하는 공간입니다.'}
             </p>
           </div>
         </div>
-        
-        {user && (
+        {user && selectedBoardId !== 2 && (!isNoticeBoard || ['staff', 'admin', 'superadmin'].includes(user.role)) && (
           <Link
-            to={`/board/write?category=${currentTab}`}
+            to="/board/write"
             state={{ boardId: selectedBoardId }}
             className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition-colors shadow-sm"
           >
@@ -219,103 +183,141 @@ const BoardListPage: React.FC = () => {
         )}
       </div>
 
-      {/* 🗂 "COMMUNITY BOARDS" 하위 탭 배치 */}
       {!isNoticeBoard && (
-        <div className="mb-6">
-          <BoardTabs currentTab={currentTab} onTabChange={setCurrentTab} />
+        <div className="mb-8 p-4 bg-gray-50 rounded-xl border border-gray-100 space-y-4">
+          {showNoticeSection && noticeBoards.length > 0 && (
+            <div className="pb-2 border-b border-gray-200 last:border-0 last:pb-0">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-1 h-4 bg-indigo-500 rounded-full"></span>
+                <h2 className="text-xs font-bold text-gray-500 uppercase tracking-widest">SYSTEM NOTICES</h2>
+                {unreadNoticeCount > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold">
+                    {unreadNoticeCount}
+                  </span>
+                )}
+              </div>
+              <div className="flex space-x-2 overflow-x-auto">
+                {noticeBoards.map((board) => (
+                  <button
+                    type="button"
+                    key={board.id}
+                    onClick={() => {
+                      setSelectedBoardId(board.id);
+                      navigate(`/board?board=${board.id}`, { replace: true });
+                    }}
+                    className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${selectedBoardId === board.id
+                        ? 'bg-indigo-600 text-white shadow-md'
+                        : 'bg-white text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 border border-gray-200'
+                      }`}
+                  >
+                    {board.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {showGeneralSection && generalBoards.length > 0 && (
+            <div className="last:pb-0">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-1 h-4 bg-blue-500 rounded-full"></span>
+                <h2 className="text-xs font-bold text-gray-500 uppercase tracking-widest">COMMUNITY BOARDS</h2>
+              </div>
+              <div className="flex space-x-2 overflow-x-auto">
+                {generalBoards.map((board) => (
+                  <button
+                    type="button"
+                    key={board.id}
+                    onClick={() => {
+                      setSelectedBoardId(board.id);
+                      navigate(`/board?board=${board.id}`, { replace: true });
+                    }}
+                    className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${selectedBoardId === board.id
+                        ? 'bg-blue-600 text-white shadow-md'
+                        : 'bg-white text-gray-600 hover:bg-blue-50 hover:text-blue-600 border border-gray-200'
+                      }`}
+                  >
+                    {board.name}
+                  </button>
+                ))}
+                <button 
+                  type="button" 
+                  className="px-4 py-1.5 rounded-lg text-sm font-semibold bg-white text-gray-600 border border-gray-200 hover:bg-blue-50"
+                  onClick={() => alert('프로젝트 게시판 클릭됨!')}
+                >
+                  프로젝트 게시판
+                </button>
+
+                <button 
+                  type="button" 
+                  className="px-4 py-1.5 rounded-lg text-sm font-semibold bg-white text-gray-600 border border-gray-200 hover:bg-blue-50"
+                  onClick={() => alert('기술 블로그 클릭됨!')}
+                >
+                  기술 블로그
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* 리스트 구역 */}
-      {loading ? (
-        <div className="bg-white rounded-xl p-8 text-center text-gray-500">로딩중...</div>
-      ) : posts.length === 0 ? (
-        <div className="bg-white rounded-xl p-8 text-center text-gray-500">게시글이 없습니다.</div>
-      ) : currentTab === 'blog' ? (
-        
-        /* 🎨 블로그 전용 카드 레이아웃 */
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {sortedPosts.map((post) => {
-            const likeInfo = localLikes[post.id] || { count: post.view_count || 0, liked: false };
-            return (
-              <div key={post.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden hover:-translate-y-1 hover:shadow-md transition-all duration-200">
-                <Link to={`/board/${selectedBoardId}/post/${post.id}`} state={{ boardId: selectedBoardId }} className="block">
-                  <div className="w-full h-44 overflow-hidden bg-gray-50">
-                    {/* 🌟 수정 포인트(6번): (post as any).thumbnail_url 에서 임의의 any 캐스팅 전면 제거! */}
-                    <img 
-                      src={post.thumbnail_url || 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=400'} 
-                      alt="썸네일" 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="p-4">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <div>{getNoticeBadge(post.notice_type, post.is_blinded)}</div>
-                      <button
-                        onClick={(e) => handleLikeClick(e, post.id, post.view_count || 0)}
-                        className={`flex items-center gap-1 text-xs font-semibold transition-colors ${likeInfo.liked ? 'text-red-500' : 'text-gray-400 hover:text-red-400'}`}
-                      >
-                        ❤️ {likeInfo.count}
-                      </button>
-                    </div>
-                    <h3 className="text-base font-bold text-gray-800 line-clamp-1 mb-3">{post.title}</h3>
-                    <div className="flex justify-between items-center text-xs text-gray-500 border-t border-gray-50 pt-2.5">
-                      <span className="font-semibold text-gray-600">by {post.author?.name || '알 수 없음'}</span>
-                      <span>{formatPostDate(post.created_at)}</span>
-                    </div>
-                  </div>
-                </Link>
-              </div>
-            );
-          })}
+      {isNoticeBoard && (
+        <div className="mb-6 bg-indigo-600 rounded-xl p-6 text-white shadow-lg overflow-hidden relative">
+          <div className="relative z-10">
+            <h3 className="text-lg font-bold mb-1">📢 공지사항 안내</h3>
+            <p className="text-indigo-100 text-sm">CodeIn의 최신 소식과 중요 안내를 가장 먼저 확인하세요.</p>
+          </div>
+          <Megaphone className="absolute -bottom-6 -right-6 w-32 h-32 text-indigo-500 opacity-20 transform -rotate-12" />
         </div>
+      )}
 
-      ) : (
-
-        /* 📊 자유 및 프로젝트 탭일 때 뜨는 기존 리스트 */
-        <div className="bg-white shadow-sm overflow-hidden rounded-xl border border-gray-100">
-          <ul className="divide-y divide-gray-100">
-            {sortedPosts.map((post) => {
-              const likeInfo = localLikes[post.id] || { count: post.view_count || 0, liked: false };
-              return (
-                <li key={post.id} className="transition-all hover:bg-gray-50">
+      <div className="bg-white shadow-xl overflow-hidden sm:rounded-xl border border-gray-100">
+        {loading ? (
+          <div className="p-4 text-center text-gray-500">로딩중...</div>
+        ) : (
+          <ul className="divide-y divide-gray-200">
+            {posts.length === 0 ? (
+              <li className="p-4 text-center text-gray-500">게시글이 없습니다.</li>
+            ) : (
+              sortedPosts.map((post) => (
+                <li key={post.id} className={`transition-all hover:bg-gray-50 border-l-4 ${isNoticeBoard ? 'border-indigo-500 bg-indigo-50/30' : 'border-transparent'}`}>
                   <Link to={`/board/${selectedBoardId}/post/${post.id}`} state={{ boardId: selectedBoardId }} className="block p-5">
                     <div className="flex items-center justify-between">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center mb-1">
                           {getNoticeBadge(post.notice_type, post.is_blinded)}
-                          <p className={`text-sm font-semibold truncate ${post.is_blinded ? 'text-gray-400 line-through' : 'text-blue-600'} flex items-center gap-2`}>
+                          {post.is_pinned && (
+                            <span className="bg-purple-100 text-purple-800 text-xs font-medium mr-2 px-2 py-0.5 rounded">고정</span>
+                          )}
+                          {post.scheduled_at && new Date(post.scheduled_at).getTime() > Date.now() && (
+                            <span className="bg-cyan-100 text-cyan-800 text-xs font-medium mr-2 px-2 py-0.5 rounded">예약</span>
+                          )}
+                          {post.expires_at && new Date(post.expires_at).getTime() < Date.now() && (
+                            <span className="bg-gray-200 text-gray-600 text-xs font-medium mr-2 px-2 py-0.5 rounded">만료</span>
+                          )}
+                          <p className={`text-sm font-medium truncate ${post.is_blinded ? 'text-gray-400 line-through' : 'text-blue-600'}`}>
                             {post.title}
                           </p>
                         </div>
-                        <div className="flex items-center text-xs text-gray-400 mt-1.5">
-                          <span className="font-medium text-gray-600 mr-3">{post.author?.name || '알 수 없음'}</span>
+                        <div className="flex items-center text-sm text-gray-500">
+                          <span className="truncate mr-4">{post.author?.name || '알 수 없음'}</span>
                           <span>{formatPostDate(post.created_at)}</span>
                         </div>
                       </div>
-                      
-                      <div className="flex items-center gap-4 ml-4">
-                        <button
-                          onClick={(e) => handleLikeClick(e, post.id, post.view_count || 0)}
-                          className={`flex items-center gap-1 text-xs font-semibold p-1.5 rounded-lg transition-colors ${
-                            likeInfo.liked ? 'bg-red-50 text-red-500' : 'text-gray-400 hover:bg-gray-50 hover:text-red-400'
-                          }`}
-                        >
-                           <span className="font-bold">{likeInfo.count}</span>
-                        </button>
-                        <div className="flex items-center text-sm text-gray-400">
-                          <Eye className="w-4 h-4 mr-1 text-gray-300" />
+                      <div className="flex items-center text-sm text-gray-400 ml-4 group-hover:text-blue-500 transition-colors">
+                        <div className="flex items-center mr-4">
+                          <Eye className="w-4 h-4 mr-1" />
                           {post.view_count}
                         </div>
                       </div>
                     </div>
                   </Link>
                 </li>
-              );
-            })}
+              ))
+            )}
           </ul>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

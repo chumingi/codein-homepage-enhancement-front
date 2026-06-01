@@ -1,69 +1,46 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { format, parseISO, startOfMonth, getDay, getDaysInMonth } from "date-fns";
-import {
-  CheckCircle,
-  Calendar,
-  Zap,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { CheckCircle, Calendar, Zap, Gift } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { isAxiosError } from "axios";
-import {
-  getTodayCheckInStatus,
-  checkIn,
-  getMyAttendanceHistory,
-} from "../../api/checkin";
-import type {
-  AttendanceStatus,
-  AttendanceHistoryItem,
-} from "../../types/checkin";
+import { getTodayCheckInStatus, checkIn } from "../../api/checkin";
+import type { TodayCheckInStatus, StampInfo } from "../../types/checkin";
 
-// TodayCheckInCard
+// --- TodayCheckInCard ---
 
 interface TodayCheckInCardProps {
-  hasAttendedToday: boolean;
-  checkedInAt: string | null;
-  pointsEarned: number | null;
+  status: TodayCheckInStatus;
   isSubmitting: boolean;
   onCheckIn: () => void;
 }
 
-const TodayCheckInCard: React.FC<TodayCheckInCardProps> = ({
-  hasAttendedToday,
-  checkedInAt,
-  pointsEarned,
-  isSubmitting,
-  onCheckIn,
-}) => {
-  const isDisabled = isSubmitting || hasAttendedToday;
+const TodayCheckInCard: React.FC<TodayCheckInCardProps> = ({ status, isSubmitting, onCheckIn }) => {
+  const isDisabled = isSubmitting || status.checked_in;
 
   return (
     <div className="bg-dark-card border border-dark-line rounded-2xl p-6 space-y-4">
       <div className="flex items-center gap-2 text-sm text-dark-muted">
         <Calendar size={15} />
-        <span>{format(new Date(), "yyyy년 M월 d일")}</span>
+        <span>{format(parseISO(status.date), "yyyy년 M월 d일")}</span>
       </div>
 
-      {hasAttendedToday ? (
+      {status.checked_in ? (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <CheckCircle size={20} className="text-green-500" />
             <span className="font-semibold text-dark-text">오늘 출석 완료</span>
           </div>
 
-          {checkedInAt && (
+          {status.checked_in_at && (
             <p className="text-sm text-dark-muted">
-              {format(parseISO(checkedInAt), "HH:mm")}에 출석했어요.
+              {format(parseISO(status.checked_in_at), "HH:mm")}에 출석했어요.
             </p>
           )}
 
-          {pointsEarned !== null && (
+          {status.points_earned !== null && (
             <div className="flex items-center gap-1.5 text-sm">
               <Zap size={14} className="text-yellow-400" />
               <span className="text-yellow-400 font-medium">
-                +{pointsEarned} 포인트 획득
+                +{status.points_earned} 포인트 획득
               </span>
             </div>
           )}
@@ -91,155 +68,75 @@ const TodayCheckInCard: React.FC<TodayCheckInCardProps> = ({
   );
 };
 
-// StampBoard
+// --- StampBoard ---
 
 interface StampBoardProps {
-  boardSize: number;
-  currentCycle: number;
-  progress: number;
-  newlyFilledIndex?: number | null;
-  onAnimationEnd?: () => void;
-  isHistoryOpen: boolean;
-  onToggleHistory: () => void;
+  stamp: StampInfo;
 }
 
-const StampBoard: React.FC<StampBoardProps> = ({
-  boardSize,
-  currentCycle,
-  progress,
-  newlyFilledIndex,
-  onAnimationEnd,
-  isHistoryOpen,
-  onToggleHistory,
-}) => {
-  const remaining = boardSize - progress;
+const StampBoard: React.FC<StampBoardProps> = ({ stamp }) => {
+  const { board_size, current_cycle, progress } = stamp;
+  const remaining = board_size - progress;
   const COLS = 5;
-  const remainder = boardSize % COLS;
-  const paddedSize = remainder === 0 ? boardSize : boardSize + (COLS - remainder);
+  const remainder = board_size % COLS;
+  const paddedSize = remainder === 0 ? board_size : board_size + (COLS - remainder);
 
   return (
     <div className="bg-dark-card border border-dark-line rounded-2xl p-6 space-y-5">
       <div className="flex items-center justify-between">
         <h2 className="font-semibold text-dark-text">스탬프 보드</h2>
         <span className="text-xs text-dark-muted">
-          {currentCycle}사이클 &middot; {progress} / {boardSize}
+          {current_cycle}사이클 &middot; {progress} / {board_size}
         </span>
       </div>
 
       <div className="grid grid-cols-5 gap-3">
-        {Array.from({ length: boardSize }, (_, i) => {
+        {Array.from({ length: board_size }, (_, i) => {
           const filled = i < progress;
-          const isNewlyFilled = newlyFilledIndex != null && i === newlyFilledIndex;
           return (
             <div
               key={i}
-              onAnimationEnd={isNewlyFilled ? onAnimationEnd : undefined}
               className={[
                 "aspect-square rounded-xl flex items-center justify-center transition-all duration-200",
                 filled
                   ? "bg-brand/20 border-2 border-brand"
                   : "bg-dark-cardSoft border-2 border-dark-line",
-                isNewlyFilled
-                  ? "animate-[stamp-pop_0.3s_ease-out] motion-reduce:animate-none"
-                  : "",
               ].join(" ")}
             >
               {filled && <CheckCircle size={22} className="text-brand" />}
             </div>
           );
         })}
-        {paddedSize > boardSize &&
-          Array.from({ length: paddedSize - boardSize }, (_, i) => (
+        {paddedSize > board_size &&
+          Array.from({ length: paddedSize - board_size }, (_, i) => (
             <div key={`pad-${i}`} className="aspect-square" />
           ))}
       </div>
 
-      <div className="flex items-center justify-center">
-        <p className="text-xs text-dark-muted">
-          {remaining > 0
+      {stamp.reward_points !== undefined && (
+        <div className="flex items-center justify-center gap-1.5 text-xs text-dark-muted">
+          <Gift size={13} />
+          <span>완성 보상 {stamp.reward_points}포인트</span>
+        </div>
+      )}
+
+      <p className="text-xs text-center text-dark-muted">
+        {stamp.daily_points !== undefined
+          ? `일일 +${stamp.daily_points}pt · ${remaining > 0 ? `${remaining}칸 더 채우면 보상` : "스탬프 완성!"}`
+          : remaining > 0
             ? `${remaining}칸 더 채우면 보상을 받아요`
             : "스탬프 보드 완성! 보상이 지급됩니다."}
-        </p>
-      </div>
-
-      <button
-        type="button"
-        onClick={onToggleHistory}
-        aria-expanded={isHistoryOpen}
-        aria-controls="attendance-history"
-        className="w-full flex items-center justify-center gap-2 py-2.5 text-sm text-dark-muted hover:text-dark-text transition-colors border-t border-dark-line"
-      >
-        <span>{isHistoryOpen ? "이력 접기" : "출석 이력 보기"}</span>
-        <ChevronDown
-          size={15}
-          aria-hidden="true"
-          className={`transition-transform duration-200 ${isHistoryOpen ? "rotate-180" : ""}`}
-        />
-      </button>
+      </p>
     </div>
   );
 };
 
-// CheckInPage
-
-const DAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"] as const;
+// --- CheckInPage ---
 
 const CheckInPage: React.FC = () => {
-  const [status, setStatus] = useState<AttendanceStatus | null>(null);
-  const [checkedInAt, setCheckedInAt] = useState<string | null>(null);
-  const [pointsEarned, setPointsEarned] = useState<number | null>(null);
+  const [status, setStatus] = useState<TodayCheckInStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [newlyFilledIndex, setNewlyFilledIndex] = useState<number | null>(null);
-  const [showRewardModal, setShowRewardModal] = useState(false);
-  const [rewardPoints, setRewardPoints] = useState<number | null>(null);
-
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [historyYear, setHistoryYear] = useState(() => new Date().getFullYear());
-  const [historyMonth, setHistoryMonth] = useState(() => new Date().getMonth() + 1);
-  const [history, setHistory] = useState<AttendanceHistoryItem[] | null>(null);
-  const [historyLoading, setHistoryLoading] = useState(false);
-
-  const fetchHistory = useCallback(async (year: number, month: number) => {
-    setHistoryLoading(true);
-    try {
-      const data = await getMyAttendanceHistory(year, month);
-      setHistory(data);
-    } catch (error) {
-      console.error("출석 이력 조회 실패", error);
-      toast.error("출석 이력을 불러오지 못했습니다.");
-    } finally {
-      setHistoryLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!isHistoryOpen) return;
-    fetchHistory(historyYear, historyMonth);
-  }, [isHistoryOpen, historyYear, historyMonth, fetchHistory]);
-
-  const handlePrevMonth = () => {
-    if (historyMonth === 1) {
-      setHistoryYear((y) => y - 1);
-      setHistoryMonth(12);
-    } else {
-      setHistoryMonth((m) => m - 1);
-    }
-  };
-
-  const handleNextMonth = () => {
-    const now = new Date();
-    if (
-      historyYear > now.getFullYear() ||
-      (historyYear === now.getFullYear() && historyMonth >= now.getMonth() + 1)
-    ) return;
-    if (historyMonth === 12) {
-      setHistoryYear((y) => y + 1);
-      setHistoryMonth(1);
-    } else {
-      setHistoryMonth((m) => m + 1);
-    }
-  };
 
   const fetchStatus = useCallback(async () => {
     setLoading(true);
@@ -259,36 +156,35 @@ const CheckInPage: React.FC = () => {
   }, [fetchStatus]);
 
   const handleCheckIn = async () => {
-    if (isSubmitting || !status || status.has_attended_today) return;
+    if (isSubmitting || !status || status.checked_in) return;
 
     setIsSubmitting(true);
     const prev = status;
-    setStatus({ ...status, has_attended_today: true }); // Optimistic Update
+    setStatus({ ...status, checked_in: true }); // Optimistic Update
 
     try {
       const result = await checkIn();
-      setStatus({
-        ...prev,
-        has_attended_today: true,
-        current_stamp_count: result.current_stamp_count,
-      });
-      setCheckedInAt(result.attended_at);
-      setPointsEarned(result.earned_points);
-      setNewlyFilledIndex(result.current_stamp_count - 1);
-      toast.success(`출석 완료! +${result.earned_points}포인트`);
-      if (result.is_board_completed) {
-        setRewardPoints(result.earned_points);
-        setShowRewardModal(true);
-      }
-    } catch (error: unknown) {
-      if (isAxiosError(error) && error.response?.status === 400) {
-        toast.error("오늘은 이미 출석하셨습니다.");
-        // 400은 실제로 이미 출석된 상태 — 낙관적 업데이트 유지 (롤백하지 않음)
+      if (result.status === "success") {
+        setStatus({
+          ...prev,
+          checked_in: true,
+          checked_in_at: result.checked_in_at,
+          points_earned: result.points_earned,
+          stamp: result.stamp,
+        });
+        toast.success(`출석 완료! +${result.points_earned}포인트`);
       } else {
-        console.error("출석 체크 실패", error);
-        setStatus(prev);
-        toast.error("출석 처리 중 오류가 발생했습니다.");
+        setStatus({
+          ...prev,
+          checked_in: true,
+          checked_in_at: result.checked_in_at,
+        });
+        toast.error(result.message);
       }
+    } catch (error) {
+      console.error("출석 체크 실패", error);
+      setStatus(prev); // 실패 시 롤백
+      toast.error("출석 처리 중 오류가 발생했습니다.");
     } finally {
       setIsSubmitting(false);
     }
@@ -296,28 +192,8 @@ const CheckInPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
-        <div className="space-y-2 animate-pulse">
-          <div className="h-8 bg-dark-cardSoft rounded-lg w-32" />
-          <div className="h-4 bg-dark-cardSoft rounded w-48" />
-        </div>
-        <div className="bg-dark-card border border-dark-line rounded-2xl p-6 animate-pulse space-y-4">
-          <div className="h-4 bg-dark-cardSoft rounded w-28" />
-          <div className="h-4 bg-dark-cardSoft rounded w-48" />
-          <div className="h-12 bg-dark-cardSoft rounded-xl" />
-        </div>
-        <div className="bg-dark-card border border-dark-line rounded-2xl p-6 animate-pulse space-y-5">
-          <div className="flex items-center justify-between">
-            <div className="h-4 bg-dark-cardSoft rounded w-24" />
-            <div className="h-4 bg-dark-cardSoft rounded w-20" />
-          </div>
-          <div className="grid grid-cols-5 gap-3">
-            {Array.from({ length: 10 }, (_, i) => (
-              <div key={i} className="aspect-square rounded-xl bg-dark-cardSoft" />
-            ))}
-          </div>
-          <div className="h-3 bg-dark-cardSoft rounded w-36 mx-auto" />
-        </div>
+      <div className="max-w-2xl mx-auto px-4 py-8">
+        <div className="text-center py-20 text-dark-muted">로딩 중...</div>
       </div>
     );
   }
@@ -339,175 +215,19 @@ const CheckInPage: React.FC = () => {
     );
   }
 
-  const firstDay = startOfMonth(new Date(historyYear, historyMonth - 1));
-  const startOffset = getDay(firstDay);
-  const totalDays = getDaysInMonth(firstDay);
-  const todayStr = format(new Date(), "yyyy-MM-dd");
-
   return (
-    <>
-      <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-dark-text mb-2">출석 체크</h1>
-          <p className="text-dark-muted">매일 출석하고 포인트를 모아보세요.</p>
-        </div>
-        <TodayCheckInCard
-          hasAttendedToday={status.has_attended_today}
-          checkedInAt={checkedInAt}
-          pointsEarned={pointsEarned}
-          isSubmitting={isSubmitting}
-          onCheckIn={handleCheckIn}
-        />
-        <StampBoard
-          boardSize={status.max_stamp_pieces}
-          currentCycle={status.current_stamp_cycle}
-          progress={status.current_stamp_count}
-          newlyFilledIndex={newlyFilledIndex}
-          onAnimationEnd={() => setNewlyFilledIndex(null)}
-          isHistoryOpen={isHistoryOpen}
-          onToggleHistory={() => setIsHistoryOpen((prev) => !prev)}
-        />
-
-        {isHistoryOpen && (
-          <section
-            id="attendance-history"
-            className="bg-dark-card border border-dark-line rounded-2xl p-6"
-          >
-            <div className="flex items-center justify-between mb-5">
-              <button
-                type="button"
-                onClick={handlePrevMonth}
-                aria-label="이전 달"
-                className="p-1.5 rounded-lg text-dark-muted hover:text-dark-text hover:bg-dark-cardSoft transition-colors"
-              >
-                <ChevronLeft size={16} aria-hidden="true" />
-              </button>
-              <time
-                dateTime={`${historyYear}-${String(historyMonth).padStart(2, "0")}`}
-                className="text-sm font-semibold text-dark-text"
-              >
-                {historyYear}년 {historyMonth}월
-              </time>
-              <button
-                type="button"
-                onClick={handleNextMonth}
-                aria-label="다음 달"
-                className="p-1.5 rounded-lg text-dark-muted hover:text-dark-text hover:bg-dark-cardSoft transition-colors"
-              >
-                <ChevronRight size={16} aria-hidden="true" />
-              </button>
-            </div>
-
-            {historyLoading ? (
-              <div
-                role="status"
-                aria-live="polite"
-                aria-label="출석 이력 로딩 중"
-                className="grid grid-cols-7 gap-1.5 animate-pulse"
-              >
-                {Array.from({ length: 35 }, (_, i) => (
-                  <div
-                    key={i}
-                    aria-hidden="true"
-                    className="aspect-square rounded-full bg-dark-cardSoft"
-                  />
-                ))}
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-7 mb-2">
-                  {DAY_LABELS.map((d) => (
-                    <div
-                      key={d}
-                      className="text-center text-xs font-medium text-dark-muted py-1"
-                    >
-                      {d}
-                    </div>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-7 gap-y-1">
-                  {Array.from({ length: startOffset }, (_, i) => (
-                    <div key={`empty-${i}`} aria-hidden="true" />
-                  ))}
-
-                  {Array.from({ length: totalDays }, (_, i) => {
-                    const day = i + 1;
-                    const dateStr = format(
-                      new Date(historyYear, historyMonth - 1, day),
-                      "yyyy-MM-dd",
-                    );
-                    const isAttended = history?.some((item) => item.date === dateStr) ?? false;
-                    const isToday = dateStr === todayStr;
-
-                    return (
-                      <div
-                        key={day}
-                        className="flex items-center justify-center py-0.5"
-                      >
-                        <div
-                          aria-label={`${historyMonth}월 ${day}일 ${isAttended ? "출석 완료" : "미출석"}`}
-                          className={[
-                            "w-7 h-7 flex items-center justify-center rounded-full text-xs",
-                            isAttended
-                              ? "bg-brand text-white font-medium"
-                              : "text-dark-muted",
-                            isToday && !isAttended
-                              ? "ring-1 ring-brand text-brand"
-                              : "",
-                            isToday && isAttended
-                              ? "ring-2 ring-offset-1 ring-brand ring-offset-dark-card"
-                              : "",
-                          ]
-                            .filter(Boolean)
-                            .join(" ")}
-                        >
-                          {day}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {history !== null && (
-                  <div className="mt-4 pt-4 border-t border-dark-line text-xs text-dark-muted">
-                    이번 달 출석:{" "}
-                    <span className="text-dark-text font-medium">{history.length}일</span>
-                  </div>
-                )}
-              </>
-            )}
-          </section>
-        )}
+    <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-dark-text mb-2">출석 체크</h1>
+        <p className="text-dark-muted">매일 출석하고 포인트를 모아보세요.</p>
       </div>
-
-      {showRewardModal && (
-        <div
-          className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4"
-          onClick={() => setShowRewardModal(false)}
-        >
-          <div
-            className="bg-dark-card rounded-2xl shadow-xl max-w-sm w-full p-8 text-center animate-in fade-in zoom-in-95 duration-200 border border-dark-line"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <p className="text-4xl mb-4">🎉</p>
-            <h2 className="text-xl font-bold text-dark-text mb-2">스탬프 완성!</h2>
-            <p className="text-dark-muted text-sm mb-1">출석판을 모두 채웠습니다.</p>
-            <p className="text-brand font-semibold text-sm mb-6">
-              {rewardPoints !== null
-                ? `오늘 총 ${rewardPoints}포인트 획득!`
-                : "보상 포인트가 지급됐습니다."}
-            </p>
-            <button
-              onClick={() => setShowRewardModal(false)}
-              className="px-6 py-2 rounded-xl bg-brand text-white text-sm font-medium hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-            >
-              확인
-            </button>
-          </div>
-        </div>
-      )}
-    </>
+      <TodayCheckInCard
+        status={status}
+        isSubmitting={isSubmitting}
+        onCheckIn={handleCheckIn}
+      />
+      <StampBoard stamp={status.stamp} />
+    </div>
   );
 };
 
