@@ -52,7 +52,20 @@ const PostWritePage: React.FC = () => {
     : boards.filter((board) => !board.name.includes('공지'));
 
   const currentSelectedBoard = boards.find((board) => board.id === boardId);
-  const selectedBoardType = currentSelectedBoard?.board_type;
+
+  const categoryTypeMap: Record<string, string> = { project: 'project', blog: 'blog', free: 'general' };
+  const expectedBoardType = categoryTypeMap[currentCategory];
+
+  // 백엔드에 해당 board_type 레코드가 아직 없는 상태 (B option)
+  // — project/blog 카테고리인데 실제 board가 하나도 없을 때
+  const isBoardMissing =
+    (currentCategory === 'project' || currentCategory === 'blog') &&
+    !boards.some((b) => b.board_type === expectedBoardType);
+
+  // isBoardMissing이면 URL category로 board_type 추론, 아니면 실제 선택된 board의 type 사용
+  // 백엔드가 board를 생성하면 isBoardMissing = false가 되어 자동으로 A option으로 전환됨
+  const effectiveBoardType: string | undefined =
+    isBoardMissing ? expectedBoardType : currentSelectedBoard?.board_type;
 
   useEffect(() => {
     const fetchBoards = async () => {
@@ -63,21 +76,27 @@ const PostWritePage: React.FC = () => {
           ? data
           : data.filter((board) => !board.name.includes('공지'));
         
-        if (filteredBoards.length > 0) {
-          // 수정 모드가 아니고, 기존 전달된 boardId가 없을 때 카테고리 기반 자동 초기값 설정 (5번 보완)
-          if (!isEditMode && !locationState.boardId) {
-            let matchedInitialBoard = filteredBoards[0];
-            if (currentCategory === 'project') {
-              matchedInitialBoard = filteredBoards.find(b => b.board_type === 'project') || filteredBoards[0];
-            } else if (currentCategory === 'blog') {
-              matchedInitialBoard = filteredBoards.find(b => b.board_type === 'blog') || filteredBoards[0];
-            } else if (currentCategory === 'free') {
-              matchedInitialBoard = filteredBoards.find(b => b.board_type === 'general') || filteredBoards[0];
-            }
-            setBoardId(matchedInitialBoard.id);
-          } else if (!boardId || !filteredBoards.some((board) => board.id === boardId)) {
-            setBoardId(filteredBoards[0].id);
+        if (filteredBoards.length > 0 && !isEditMode) {
+          const expectedType =
+            currentCategory === 'project' ? 'project'
+            : currentCategory === 'blog' ? 'blog'
+            : 'general';
+
+          // locationState.boardId가 있고 그 board_type이 category와 일치하면 그대로 사용
+          const passedBoard = locationState.boardId
+            ? filteredBoards.find(b => b.id === locationState.boardId)
+            : null;
+
+          if (passedBoard?.board_type === expectedType) {
+            setBoardId(passedBoard.id);
+          } else {
+            // board_type이 다르거나 board가 없으면 category 기반으로 재탐색
+            const categoryBoard = filteredBoards.find(b => b.board_type === expectedType);
+            setBoardId(categoryBoard?.id ?? filteredBoards[0].id);
           }
+        } else if (!isEditMode && !boardId) {
+          const fallback = filteredBoards[0];
+          if (fallback) setBoardId(fallback.id);
         }
       } catch (error) {
         toast.error('게시판 목록을 불러오는데 실패했습니다');
@@ -143,12 +162,18 @@ const PostWritePage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
+      if (isBoardMissing) {
+        toast.error('해당 게시판이 아직 준비되지 않았습니다. 백엔드 설정 후 이용해 주세요.');
+        setIsSubmitting(false);
+        return;
+      }
+
       const payload: CreatePostPayload = {
         title,
         content,
         board_id: boardId,
-        github_url: selectedBoardType === 'project' ? githubUrl : undefined,
-        thumbnail_url: selectedBoardType === 'blog' ? thumbnailUrl : undefined,
+        github_url: effectiveBoardType === 'project' ? githubUrl : undefined,
+        thumbnail_url: effectiveBoardType === 'blog' ? thumbnailUrl : undefined,
         // TODO: Swagger BoardCreate 실 연동 시 아래 필드 payload에 포함
         // tech_stack: selectedBoardType === 'project' ? techStack.split(',').map(s => s.trim()).filter(Boolean) : undefined,
         // period: selectedBoardType === 'project' ? period : undefined,
@@ -227,7 +252,7 @@ const PostWritePage: React.FC = () => {
           />
         </div>
 
-        {selectedBoardType === 'project' && (
+        {effectiveBoardType === 'project' && (
           <div className="mb-4 space-y-3 p-4 bg-dark-cardSoft rounded-xl border border-dark-line">
             <h3 className="text-sm font-semibold text-dark-muted">프로젝트 정보 (선택)</h3>
             <input
@@ -261,7 +286,7 @@ const PostWritePage: React.FC = () => {
           </div>
         )}
 
-        {selectedBoardType === 'blog' && (
+        {effectiveBoardType === 'blog' && (
           <div className="mb-4 text-left">
             <label className="block text-gray-700 text-sm font-bold mb-2">
               🖼️ 블로그 썸네일 이미지 주소

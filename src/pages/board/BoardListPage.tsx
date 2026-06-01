@@ -158,6 +158,9 @@ const BoardListPage: React.FC = () => {
     return new Date(c.created_at).getTime() - new Date(a.created_at).getTime();
   });
 
+  const tabToBoardType: Record<TabType, string> = { free: 'general', project: 'project', blog: 'blog' };
+  const writeTargetBoard = boards.find((b) => b.board_type === tabToBoardType[currentTab]);
+
   const pageTitle = isNoticeBoard
     ? (selectedBoard?.name ?? '공지사항')
     : currentTab === 'free'
@@ -203,7 +206,7 @@ const BoardListPage: React.FC = () => {
         {user && (
           <Link
             to={`/board/write?category=${currentTab}`}
-            state={{ boardId: selectedBoardId }}
+            state={writeTargetBoard ? { boardId: writeTargetBoard.id } : undefined}
             className="w-full sm:w-auto flex items-center justify-center gap-2 bg-brand hover:bg-brand-light text-white font-bold py-2 px-6 rounded-lg transition-colors shadow-sm"
           >
             <PencilLine className="w-4 h-4" />
